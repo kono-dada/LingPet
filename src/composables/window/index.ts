@@ -45,7 +45,6 @@ export function useWindow() {
   const { 
     applyWindowConfig,
     saveMainWindowPosition,
-    saveSettingsWindowBounds,
     saveTimer
   } = useWindowPosition();
   const { getWindowConfig } = windowConfig();
@@ -93,7 +92,6 @@ export function useWindow() {
     
     // 位置持久化
     saveMainWindowPosition,
-    saveSettingsWindowBounds,
     applyWindowConfig,
     
     // 配置管理
