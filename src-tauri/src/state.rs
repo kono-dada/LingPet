@@ -18,7 +18,13 @@
 use std::sync::Arc;
 use crate::config::ConfigManager;
 
+// 气泡窗口跟随状态
+pub struct BubbleFollowState {
+    pub current_message: String,
+}
+
 // 全局状态管理
 pub struct AppState {
     pub config_manager: Arc<tokio::sync::Mutex<ConfigManager>>,
+    pub bubble_state: Arc<tokio::sync::Mutex<Option<BubbleFollowState>>>,
 }

@@ -23,17 +23,7 @@
  */
 
 use tauri::{AppHandle, Manager};
-use std::sync::{Arc, Mutex};
-
-// 全局状态存储气泡窗口跟随信息  
-lazy_static::lazy_static! {
-    static ref BUBBLE_FOLLOWING: Arc<Mutex<Option<BubbleFollowState>>> = Arc::new(Mutex::new(None));
-}
-
-struct BubbleFollowState {
-    _app: AppHandle,
-    current_message: String,  // 存储当前气泡的消息，用于重新定位时计算尺寸
-}
+use crate::state::{AppState, BubbleFollowState};
 
 // 气泡窗口属性
 struct BubbleWindowProps {
@@ -84,9 +74,10 @@ fn calculate_bubble_window_props(
 pub async fn show_chat_bubble(
     app: AppHandle,
     message: String,
+    state: tauri::State<'_, AppState>,
 ) -> Result<(), String> {
     // 停止之前的跟随
-    stop_bubble_following();
+    stop_bubble_following(&state).await;
     
     // 关闭所有现有的气泡窗口
     close_all_bubble_windows(&app).await?;
@@ -133,30 +124,30 @@ pub async fn show_chat_bubble(
     }
 
     // 启动窗口跟随
-    start_bubble_following(app.clone(), window_label.to_string(), message.clone())?;
+    start_bubble_following(app.clone(), window_label.to_string(), message.clone(), &state).await?;
 
     Ok(())
 }
 
 #[tauri::command]
-pub async fn close_chat_bubble(app: AppHandle) -> Result<(), String> {
-    stop_bubble_following();
+pub async fn close_chat_bubble(app: AppHandle, state: tauri::State<'_, AppState>) -> Result<(), String> {
+    stop_bubble_following(&state).await;
     close_all_bubble_windows(&app).await?;
     Ok(())
 }
 
 // 重新定位气泡窗口（在拖拽结束时由前端主动调用）
 #[tauri::command] 
-pub async fn reposition_bubble_on_drag_end(app: AppHandle) -> Result<(), String> {
+pub async fn reposition_bubble_on_drag_end(app: AppHandle, state: tauri::State<'_, AppState>) -> Result<(), String> {
     if let (Some(main_window), Some(bubble_window)) = (
         app.get_webview_window("main"),
         app.get_webview_window("chat-bubble")
     ) {
-        // 从全局状态获取当前消息
+        // 从状态获取当前消息
         let current_message = {
-            let guard = BUBBLE_FOLLOWING.lock().unwrap();
+            let guard = state.bubble_state.lock().await;
             guard.as_ref()
-                .map(|state| state.current_message.clone())
+                .map(|bubble_state| bubble_state.current_message.clone())
                 .ok_or_else(|| "找不到当前气泡消息".to_string())?
         };
         
@@ -173,21 +164,20 @@ pub async fn reposition_bubble_on_drag_end(app: AppHandle) -> Result<(), String>
     Ok(())
 }
 
-// 启动气泡窗口跟随（简化版，不再监听事件）
-fn start_bubble_following(app: AppHandle, _bubble_label: String, message: String) -> Result<(), String> {
+// 启动气泡窗口跟随
+async fn start_bubble_following(_app: AppHandle, _bubble_label: String, message: String, state: &tauri::State<'_, AppState>) -> Result<(), String> {
     let follow_state = BubbleFollowState {
-        _app: app.clone(),
         current_message: message,
     };
     
-    *BUBBLE_FOLLOWING.lock().unwrap() = Some(follow_state);
+    *state.bubble_state.lock().await = Some(follow_state);
     
     Ok(())
 }
 
 // 停止气泡窗口跟随
-fn stop_bubble_following() {
-    *BUBBLE_FOLLOWING.lock().unwrap() = None;
+async fn stop_bubble_following(state: &tauri::State<'_, AppState>) {
+    *state.bubble_state.lock().await = None;
 }
 
 // 关闭所有气泡窗口

@@ -46,6 +46,7 @@ pub fn run() {
             // 设置应用状态
             let app_state = AppState {
                 config_manager: Arc::new(tokio::sync::Mutex::new(config_manager)),
+                bubble_state: Arc::new(tokio::sync::Mutex::new(None)),
             };
             
             // 异步加载窗口配置并设置主窗口位置

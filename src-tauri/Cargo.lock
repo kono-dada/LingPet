@@ -783,7 +783,6 @@ version = "0.1.0"
 dependencies = [
  "cocoa",
  "dirs 5.0.1",
- "lazy_static",
  "objc",
  "objc-foundation",
  "serde",
