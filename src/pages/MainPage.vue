@@ -23,7 +23,7 @@
 import { ref, computed, onMounted } from "vue";
 import PetAvatar from "../components/PetAvatar.vue";
 import { useWindow } from "../composables/window";
-import { useSettings } from "../composables/useSettings";
+import { useSettings } from "../composables/settings/useSettings";
 import { eventBusService } from "../services/eventBus";
 
 // 窗口元素引用

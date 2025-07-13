@@ -63,9 +63,9 @@
 
 <script setup lang="ts">
 import { toRefs, withDefaults, ref, onMounted, computed } from "vue";
-import { usePet } from "../composables/usePet";
-import { useAI } from "../composables/useAI";
-import { useConversation } from "../composables/useConversation";
+import { usePet } from "../composables/chat/usePet";
+import { useAI } from "../composables/chat/useAI";
+import { useConversation } from "../composables/chat/useConversation";
 import { eventBusService } from "../services/eventBus";
 import { createNotificationWindow } from "../services/windowFactory";
 

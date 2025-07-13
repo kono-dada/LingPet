@@ -30,7 +30,7 @@
  */
 
 import { ref, computed, onMounted} from 'vue';
-import { useAI } from '../useAI';
+import { useAI } from '../chat/useAI';
 import { eventBusService } from '../../services/eventBus';
 import type { AIConfig } from '../../types/ai';
 

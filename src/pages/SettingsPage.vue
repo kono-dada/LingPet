@@ -77,7 +77,7 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { useSettings } from '../composables/useSettings';
+import { useSettings } from '../composables/settings/useSettings';
 import AppearanceSettings from '../components/AppearanceSettings.vue';
 import AISettings from '../components/AISettings.vue';
 import AboutSettings from '../components/AboutSettings.vue';

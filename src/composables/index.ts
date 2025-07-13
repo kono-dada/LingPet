@@ -26,14 +26,14 @@
  */
 
 // Composables 统一导出
-export { useSettings } from './useSettings';
-export { useChat } from './useChat';
+export { useSettings } from './settings/useSettings';
+export { useChat } from './chat/useChat';
 export { useAppearanceSettings } from './settings/useAppearanceSettings';
 export { useAISettings } from './settings/useAISettings';
 export { useAboutSettings } from './settings/useAboutSettings';
 export { useWindow, type WindowConfig } from './window';
-export { usePet } from './usePet';
-export { useAI } from './useAI';
+export { usePet } from './chat/usePet';
+export { useAI } from './chat/useAI';
 export { eventBusService as useEventBus } from '../services/eventBus';
 
 // 窗口管理服务导出
@@ -51,6 +51,6 @@ export type {
 } from '../services/windowFactory';
 
 // 兼容性导出（为了向后兼容，避免立即破坏现有代码）
-export { useSettings as useSettingsUI } from './useSettings';
-export { usePet as useEmotions } from './usePet';
-export { useChat as useChatBubble } from './useChat';
+export { useSettings as useSettingsUI } from './settings/useSettings';
+export { usePet as useEmotions } from './chat/usePet';
+export { useChat as useChatBubble } from './chat/useChat';

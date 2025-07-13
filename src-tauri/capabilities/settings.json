@@ -8,6 +8,7 @@
     "core:window:allow-close",
     "core:window:allow-set-focus",
     "core:event:default",
-    "core:window:allow-set-position"
+    "core:window:allow-set-position",
+    "core:window:allow-set-always-on-top"
   ]
 }

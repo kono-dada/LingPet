@@ -19,6 +19,7 @@
     "core:webview:allow-webview-size",
     "core:event:default",
     "opener:default",
-    "core:window:allow-set-position"
+    "core:window:allow-set-position",
+    "core:window:allow-set-always-on-top"
   ]
 }

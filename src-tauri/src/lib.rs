@@ -46,7 +46,6 @@ pub fn run() {
             // 设置应用状态
             let app_state = AppState {
                 config_manager: Arc::new(tokio::sync::Mutex::new(config_manager)),
-                bubble_state: Arc::new(tokio::sync::Mutex::new(None)),
             };
             
             // 异步加载窗口配置并设置主窗口位置
@@ -94,10 +93,7 @@ pub fn run() {
             save_ai_config,
             save_main_window_position,
             save_settings_window_bounds,
-            get_window_config,
-            show_chat_bubble,
-            close_chat_bubble,
-            reposition_bubble_on_drag_end
+            get_window_config
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

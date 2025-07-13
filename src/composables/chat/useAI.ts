@@ -26,10 +26,10 @@
 // AI 配置管理和对话功能
 import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
-import type { AIConfig, AIResponse, ChatRequest, AIMessage, PetResponse, PetResponseItem } from '../types/ai';
-import type { EmotionName } from '../types/emotion';
-import { DEFAULT_CHARACTER_PROMPT, RESPONSE_FORMAT_PROMPT } from '../constants/ai';
-import { EMOTIONS } from '../constants/emotions';
+import type { AIConfig, AIResponse, ChatRequest, AIMessage, PetResponse, PetResponseItem } from '../../types/ai';
+import type { EmotionName } from '../../types/emotion';
+import { DEFAULT_CHARACTER_PROMPT, RESPONSE_FORMAT_PROMPT } from '../../constants/ai';
+import { EMOTIONS } from '../../constants/emotions';
 
 // 默认配置常量
 const DEFAULT_AI_CONFIG: AIConfig = {

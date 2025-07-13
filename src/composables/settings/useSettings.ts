@@ -25,14 +25,14 @@
  */
 
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { SETTINGS_TABS, DEFAULT_ACTIVE_TAB } from "../constants/settings-ui";
-import type { SettingsState } from '../types/settings-ui';
-import { createSettingsWindow, WindowFactory } from '../services/windowFactory';
+import { SETTINGS_TABS, DEFAULT_ACTIVE_TAB } from "../../constants/settings-ui";
+import type { SettingsState } from '../../types/settings-ui';
+import { createSettingsWindow, WindowFactory } from '../../services/windowFactory';
 
 // 导入各个设置页面的组合式函数
-import { useAppearanceSettings } from './settings/useAppearanceSettings';
-import { useAISettings } from './settings/useAISettings';
-import { useAboutSettings } from './settings/useAboutSettings';
+import { useAppearanceSettings } from './useAppearanceSettings';
+import { useAISettings } from './useAISettings';
+import { useAboutSettings } from './useAboutSettings';
 
 export function useSettings() {
   // ===================

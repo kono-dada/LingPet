@@ -10,9 +10,9 @@ export function useWindowResize() {
   const { width, height } = useWindowSize();
 
   // 强制保持正方形窗口
-  const forceSquare = useDebounceFn(async (isDragging: boolean, isSettingsWindow: boolean) => {
-    if (isDragging || isSettingsWindow) return; // 拖拽时或设置窗口时不执行
-    
+  const forceSquare = useDebounceFn(async (isDragging: boolean) => {
+    if (isDragging) return; // 拖拽时不执行
+
     if (Math.abs(width.value - height.value) > 2) {
       const size = Math.min(width.value, height.value);
       const logicalSize = new LogicalSize(size, size);

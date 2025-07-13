@@ -43,8 +43,6 @@ export function useWindow() {
   const { isDragging, handleWindowDrag } = useWindowDrag();
   const { width, height, forceSquare, resizeWindow, initializeWindowSize } = useWindowResize();
   const { 
-    isSettingsWindow, 
-    detectWindowType, 
     applyWindowConfig,
     saveMainWindowPosition,
     saveSettingsWindowBounds,
@@ -55,24 +53,23 @@ export function useWindow() {
 
   // 监听窗口大小变化，在非拖拽状态时强制保持正方形（仅主窗口）
   watch([width, height], () => {
-    if (!isDragging.value && !isSettingsWindow.value) {
-      forceSquare(isDragging.value, isSettingsWindow.value);
+    if (!isDragging.value) {
+      forceSquare(isDragging.value);
     }
   });
 
   // 拖拽结束后的处理
   watch(isDragging, (newValue) => {
-    if (!newValue && !isSettingsWindow.value) {
+    if (!newValue) {
       // 延迟执行强制正方形，让拖拽完全结束（仅主窗口）
       setTimeout(() => {
-        forceSquare(false, isSettingsWindow.value);
+        forceSquare(false);
       }, 50);
     }
   });
 
   // 生命周期
   onMounted(() => {
-    detectWindowType();
     setupWindowMoveListener();
     applyWindowConfig();
   });
@@ -84,7 +81,6 @@ export function useWindow() {
   return {
     // 状态
     isDragging,
-    isSettingsWindow,
     width,
     height,
     

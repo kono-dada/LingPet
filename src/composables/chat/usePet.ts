@@ -21,8 +21,8 @@
  */
 
 import { ref } from "vue";
-import type { EmotionName } from "../types/emotion";
-import { EMOTIONS, DEFAULT_EMOTION } from "../constants/emotions";
+import type { EmotionName } from "../../types/emotion";
+import { EMOTIONS, DEFAULT_EMOTION } from "../../constants/emotions";
 
 export function usePet() {
   // ===================

@@ -39,33 +39,21 @@ export interface WindowConfig {
 export function windowConfig() {
   // 保存主窗口位置
   async function saveMainWindowPosition(x: number, y: number) {
-    try {
-      await invoke('save_main_window_position', { x, y });
-      console.log(`主窗口位置已保存: (${x}, ${y})`);
-    } catch (error) {
-      console.error('保存主窗口位置失败:', error);
-    }
+    await invoke('save_main_window_position', { x, y });
+    console.log(`主窗口位置已保存: (${x}, ${y})`);
   }
 
   // 保存设置窗口边界
   async function saveSettingsWindowBounds(x: number, y: number, width: number, height: number) {
-    try {
-      await invoke('save_settings_window_bounds', { x, y, width, height });
-      console.log(`设置窗口边界已保存: (${x}, ${y}, ${width}, ${height})`);
-    } catch (error) {
-      console.error('保存设置窗口边界失败:', error);
-    }
+    await invoke('save_settings_window_bounds', { x, y, width, height });
+    console.log(`设置窗口边界已保存: (${x}, ${y}, ${width}, ${height})`);
   }
 
   // 获取窗口配置
   async function getWindowConfig(): Promise<WindowConfig | null> {
-    try {
-      const config = await invoke('get_window_config');
-      return config as WindowConfig;
-    } catch (error) {
-      console.error('获取窗口配置失败:', error);
-      return null;
-    }
+    const config = await invoke('get_window_config');
+    console.log('获取窗口配置:', config);
+    return config as WindowConfig;
   }
 
   return {

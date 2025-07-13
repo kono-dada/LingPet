@@ -12,9 +12,9 @@
  */
 
 import { ref } from 'vue';
-import type { EmotionName } from '../types/emotion';
-import { createNotificationWindow } from '../services/windowFactory';
-import { DEFAULT_EMOTION } from '../constants/emotions';
+import type { EmotionName } from '../../types/emotion';
+import { createNotificationWindow } from '../../services/windowFactory';
+import { DEFAULT_EMOTION } from '../../constants/emotions';
 
 export interface ConversationMessage {
     message: string;

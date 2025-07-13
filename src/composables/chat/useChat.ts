@@ -18,7 +18,10 @@
  */
 
 import { ref, computed } from "vue";
-import { createNotificationWindow, WindowFactory } from '../services/windowFactory';
+import { createNotificationWindow, WindowFactory } from '../../services/windowFactory';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { useDebounceFn } from '@vueuse/core';
+import { LogicalPosition } from '@tauri-apps/api/dpi';
 
 export function useChat() {
   // ===================
@@ -38,6 +41,74 @@ export function useChat() {
     const diff = now.getTime() - lastShowTime.value.getTime();
     return diff < 5000; // 5秒内算作最近消息
   });
+
+  // ===================
+  // 气泡窗口跟随功能
+  // ===================
+  
+  let followUnlisten: (() => void) | null = null;
+
+  // 设置气泡窗口跟随主窗口
+  const setupBubbleFollow = useDebounceFn(async (bubbleWindow: WebviewWindow, message: string) => {
+    try {
+      // 清理之前的监听器
+      if (followUnlisten) {
+        followUnlisten();
+        followUnlisten = null;
+      }
+
+      // 获取主窗口
+      const mainWindow = await WebviewWindow.getByLabel('main');
+      if (!mainWindow) return;
+
+      // 监听主窗口移动事件
+      followUnlisten = await mainWindow.listen('tauri://move', async () => {
+        try {
+          // 重新计算并设置气泡位置
+          await repositionBubble(bubbleWindow, message);
+        } catch (error) {
+          console.debug('气泡跟随失败:', error);
+        }
+      });
+
+      console.log('气泡窗口跟随已启用');
+    } catch (error) {
+      console.error('设置气泡跟随失败:', error);
+    }
+  }, 300);
+
+  // 重新定位气泡窗口
+  async function repositionBubble(bubbleWindow: WebviewWindow, message: string) {
+    try {
+      const mainWindow = await WebviewWindow.getByLabel('main');
+      if (!mainWindow) return;
+
+      // 获取主窗口信息
+      const [mainPosition, mainSize, scaleFactor] = await Promise.all([
+        mainWindow.innerPosition(),
+        mainWindow.innerSize(),
+        mainWindow.scaleFactor()
+      ]);
+
+      // 计算新的气泡位置
+      const messageLength = message.length;
+      const bubbleWidth = 320;
+      const estimatedLines = Math.ceil(messageLength / 15);
+      const bubbleHeight = Math.min(Math.max(estimatedLines * 24 + 60, 80), 250);
+      
+      const logicalMainX = mainPosition.x / scaleFactor;
+      const logicalMainY = mainPosition.y / scaleFactor;
+      const logicalMainWidth = mainSize.width / scaleFactor;
+      
+      const bubbleX = logicalMainX + (logicalMainWidth / 2) - (bubbleWidth / 2);
+      const bubbleY = logicalMainY - bubbleHeight - 10;
+
+      // 设置新位置
+      await bubbleWindow.setPosition(new LogicalPosition(bubbleX, bubbleY));
+    } catch (error) {
+      console.debug('重新定位气泡失败:', error);
+    }
+  }
 
   // ===================
   // 聊天管理方法
@@ -68,9 +139,18 @@ export function useChat() {
         
         // 监听窗口关闭事件来更新状态
         window.once('tauri://destroyed', () => {
+          // 清理跟随监听器
+          if (followUnlisten) {
+            followUnlisten();
+            followUnlisten = null;
+          }
+          
           isVisible.value = false;
           currentMessage.value = '';
         });
+
+        // 设置主窗口跟随监听器
+        setupBubbleFollow(window, message);
       }
 
       return window;
@@ -84,6 +164,12 @@ export function useChat() {
   // 关闭聊天气泡
   async function closeChatBubble() {
     try {
+      // 清理跟随监听器
+      if (followUnlisten) {
+        followUnlisten();
+        followUnlisten = null;
+      }
+
       await WindowFactory.closeWindow('chat-bubble');
       
       // 更新状态

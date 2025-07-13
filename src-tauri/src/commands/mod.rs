@@ -25,4 +25,3 @@ pub use appearance::*;
 pub use ai::*;
 pub use window::*;
 pub use general::*;
-pub use chat_bubble::*;

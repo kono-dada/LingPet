@@ -19,7 +19,6 @@
  */
 
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { invoke } from '@tauri-apps/api/core';
 import { windowConfig } from './windowConfig';
 import type { WindowConfig } from './windowConfig';
 
@@ -181,23 +180,90 @@ export class WindowFactory {
   }
 
   /**
-   * 创建通知窗口 (后端创建)
+   * 创建聊天气泡窗口 (完全前端实现)
    */
   private static async createChatBubble(config: ChatBubbleConfig): Promise<WebviewWindow | null> {
     try {
-      await invoke('show_chat_bubble', {
-        message: config.message,
-        autoHide: config.autoHide,
-        autoHideDelay: config.autoHideDelay,
+      // 获取主窗口用于计算气泡位置
+      const mainWindow = await WebviewWindow.getByLabel('main');
+      if (!mainWindow) {
+        throw new Error('找不到主窗口');
+      }
+
+      // 计算气泡窗口属性
+      const bubbleProps = await this.calculateBubbleWindowProps(mainWindow, config.message);
+      
+      // 构建URL
+      const url = `/#/chat-bubble?message=${encodeURIComponent(config.message)}&autoHide=${config.autoHide}&autoHideDelay=${config.autoHideDelay}`;
+      
+      // 创建窗口配置 (参考设置窗口的有效参数)
+      const windowOptions: any = {
+        url: url,
+        title: '',
+        width: bubbleProps.width,
+        height: bubbleProps.height,
+        x: bubbleProps.x,
+        y: bubbleProps.y,
+        resizable: false,
+        transparent: true,
+        decorations: false,
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        center: false, // 使用指定位置，不居中
+      };
+
+      const window = new WebviewWindow(config.label, windowOptions);
+      
+      // 设置窗口始终置顶
+      window.once('tauri://created', async () => {
+        try {
+          await window.setAlwaysOnTop(true);
+        } catch (error) {
+          console.warn('设置气泡窗口置顶失败:', error);
+        }
       });
 
-      // 等待窗口创建并返回引用
-      await new Promise(resolve => setTimeout(resolve, 100));
-      return WebviewWindow.getByLabel(config.label) || null;
+      return window;
     } catch (error) {
-      console.error('创建通知窗口失败:', error);
+      console.error('创建聊天气泡窗口失败:', error);
       return null;
     }
+  }
+
+  /**
+   * 计算气泡窗口位置和尺寸
+   */
+  private static async calculateBubbleWindowProps(mainWindow: WebviewWindow, message: string) {
+    // 获取主窗口信息
+    const [mainPosition, mainSize, scaleFactor] = await Promise.all([
+      mainWindow.innerPosition(),
+      mainWindow.innerSize(), 
+      mainWindow.scaleFactor()
+    ]);
+
+    // 根据消息长度动态计算气泡尺寸
+    const messageLength = message.length;
+    const bubbleWidth = 320;
+    
+    // 根据消息长度估算高度（考虑换行）
+    const estimatedLines = Math.ceil(messageLength / 15);
+    const bubbleHeight = Math.min(Math.max(estimatedLines * 24 + 60, 80), 250);
+    
+    // 将物理坐标转换为逻辑坐标
+    const logicalMainX = mainPosition.x / scaleFactor;
+    const logicalMainY = mainPosition.y / scaleFactor;
+    const logicalMainWidth = mainSize.width / scaleFactor;
+    
+    // 计算气泡逻辑位置：主窗口正上方居中
+    const bubbleX = logicalMainX + (logicalMainWidth / 2) - (bubbleWidth / 2);
+    const bubbleY = logicalMainY - bubbleHeight - 10; // 添加10px间距
+    
+    return {
+      width: bubbleWidth,
+      height: bubbleHeight,
+      x: bubbleX,
+      y: bubbleY,
+    };
   }
 
   /**
@@ -264,11 +330,12 @@ export class WindowFactory {
         try {
           const position = await window.innerPosition();
           const size = await window.innerSize();
+          const scaleFactor = await window.scaleFactor();
           await this.windowConfigService.saveSettingsWindowBounds(
-            position.x,
-            position.y,
-            size.width,
-            size.height
+            position.x / scaleFactor,
+            position.y / scaleFactor,
+            size.width / scaleFactor,
+            size.height / scaleFactor
           );
         } catch (error) {
           console.error('保存设置窗口位置失败:', error);
