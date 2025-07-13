@@ -1,3 +1,24 @@
+/*!
+ * @fileoverview macOS平台特定功能模块
+ * @description 实现macOS平台的特定功能，包括Dock图标隐藏、窗口行为设置等
+ * @features
+ *   - 隐藏Dock图标 (NSApplicationActivationPolicyAccessory)
+ *   - 设置窗口不参与四指轻扫等窗口活动
+ *   - 窗口置顶和透明背景支持
+ *   - 跨平台兼容性处理
+ * @apis
+ *   - setup_app: 设置应用全局配置
+ *   - setup_window: 设置窗口特定行为
+ *   - is_macos: 平台检测函数
+ * @dependencies
+ *   - cocoa: macOS Cocoa框架绑定
+ *   - objc: Objective-C运行时绑定
+ * @platform macOS only
+ * @author dada
+ * @version 1.0.0
+ * @since 2025-07-13
+ */
+
 //! macOS 特定的功能实现
 //! 
 //! 这个模块包含所有 macOS 平台特定的功能，包括：

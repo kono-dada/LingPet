@@ -1,3 +1,23 @@
+/*!
+ * @fileoverview 窗口管理相关命令模块
+ * @description 处理窗口相关的Tauri命令，包括位置保存、大小管理、应用退出等
+ * @features
+ *   - 主窗口位置持久化
+ *   - 设置窗口边界保存
+ *   - 窗口配置获取
+ *   - 应用退出功能
+ * @commands
+ *   - save_main_window_position: 保存主窗口位置
+ *   - save_settings_window_bounds: 保存设置窗口边界
+ *   - get_window_config: 获取窗口配置
+ *   - quit_app: 退出应用
+ * @persistence
+ *   窗口位置和大小信息持久化存储，下次启动时恢复
+ * @author dada
+ * @version 1.0.0
+ * @since 2025-07-13
+ */
+
 use crate::state::AppState;
 use crate::config::WindowConfig;
 

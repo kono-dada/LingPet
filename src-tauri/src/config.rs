@@ -1,3 +1,28 @@
+/*!
+ * @fileoverview 配置管理模块
+ * @description 负责应用配置的读取、写入、持久化存储，包括外观设置、AI配置、窗口配置等
+ * @features
+ *   - TOML格式配置文件管理
+ *   - 外观配置 (宠物大小、透明度、边框)
+ *   - AI配置 (API密钥、模型、参数)
+ *   - 窗口配置 (位置、大小)
+ *   - 异步文件操作
+ *   - 错误处理和类型安全
+ * @structures
+ *   - AppConfig: 应用主配置
+ *   - AppearanceConfig: 外观配置
+ *   - AIConfig: AI配置
+ *   - WindowConfig: 窗口配置
+ *   - ConfigManager: 配置管理器
+ * @storage
+ *   - 配置文件路径: ~/.config/desktop_pet/config.toml
+ *   - 自动创建配置目录
+ *   - 默认配置初始化
+ * @author dada
+ * @version 1.0.0
+ * @since 2025-07-13
+ */
+
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;

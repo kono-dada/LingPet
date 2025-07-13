@@ -1,3 +1,28 @@
+/*!
+ * @fileoverview 外观设置相关命令模块
+ * @description 处理宠物外观相关的Tauri命令，包括大小、透明度、边框显示等设置
+ * @features
+ *   - 宠物大小获取和保存
+ *   - 透明度获取和保存
+ *   - 边框显示开关
+ *   - 配置持久化存储
+ *   - 实时事件通知
+ * @commands
+ *   - get_pet_size: 获取宠物大小
+ *   - set_pet_size: 设置宠物大小
+ *   - save_pet_size: 保存宠物大小
+ *   - get_pet_opacity: 获取透明度
+ *   - set_pet_opacity: 设置透明度
+ *   - save_pet_opacity: 保存透明度
+ *   - get_show_border: 获取边框显示状态
+ *   - save_show_border: 保存边框显示状态
+ * @events
+ *   发射事件通知前端更新UI状态
+ * @author dada
+ * @version 1.0.0
+ * @since 2025-07-13
+ */
+
 use tauri::{Emitter, Manager};
 use crate::state::AppState;
 

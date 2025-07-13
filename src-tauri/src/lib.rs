@@ -1,3 +1,26 @@
+/*!
+ * @fileoverview Tauri应用程序核心库
+ * @description 桌面宠物应用的核心逻辑，包含应用初始化、状态管理、命令注册等
+ * @features
+ *   - 应用程序构建和配置
+ *   - 状态管理和配置持久化
+ *   - 平台特定设置 (macOS)
+ *   - 窗口位置和大小管理
+ *   - 命令处理器注册
+ *   - 插件集成
+ * @modules
+ *   - macos: macOS平台特定功能
+ *   - config: 配置管理
+ *   - commands: Tauri命令处理
+ *   - state: 应用状态管理
+ * @dependencies
+ *   - tauri: Tauri框架核心
+ *   - tokio: 异步运行时
+ * @author dada
+ * @version 1.0.0
+ * @since 2025-07-13
+ */
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use tauri::Manager;
 use std::sync::Arc;

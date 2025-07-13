@@ -1,3 +1,27 @@
+/*!
+ * @fileoverview 聊天气泡相关命令模块
+ * @description 处理聊天气泡窗口的创建、显示、隐藏和定位管理
+ * @features
+ *   - 聊天气泡窗口创建和管理
+ *   - 气泡窗口自动定位 (相对于主窗口)
+ *   - 窗口跟随状态管理
+ *   - 动态尺寸计算
+ *   - 窗口关闭和清理
+ * @commands
+ *   - show_chat_bubble: 显示聊天气泡
+ *   - close_chat_bubble: 关闭聊天气泡
+ *   - reposition_bubble_on_drag_end: 拖拽结束后重新定位气泡
+ * @window_management
+ *   - 气泡窗口相对主窗口定位
+ *   - 自动计算窗口尺寸
+ *   - 跟随主窗口移动
+ * @global_state
+ *   使用lazy_static管理全局气泡跟随状态
+ * @author dada
+ * @version 1.0.0
+ * @since 2025-07-13
+ */
+
 use tauri::{AppHandle, Manager};
 use std::sync::{Arc, Mutex};
 
