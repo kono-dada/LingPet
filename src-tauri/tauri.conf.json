@@ -25,7 +25,8 @@
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "visible": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "shadow": false
       },
       {
         "label": "settings",
@@ -57,7 +58,8 @@
         "skipTaskbar": true,
         "visible": false,
         "fullscreen": false,
-        "center": false
+        "center": false,
+        "shadow": false
       }
     ],
     "security": {

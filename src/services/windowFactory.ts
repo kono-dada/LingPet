@@ -210,6 +210,7 @@ export class WindowFactory {
         alwaysOnTop: true,
         skipTaskbar: true,
         center: false, // 使用指定位置，不居中
+        shadow: false, // 透明窗口不需要阴影
       };
 
       const window = new WebviewWindow(config.label, windowOptions);
@@ -218,6 +219,7 @@ export class WindowFactory {
       window.once('tauri://created', async () => {
         try {
           await window.setAlwaysOnTop(true);
+          await window.setShadow(false);
         } catch (error) {
           console.warn('设置气泡窗口置顶失败:', error);
         }

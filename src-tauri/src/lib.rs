@@ -27,6 +27,7 @@ use std::sync::Arc;
 
 // 模块导入
 mod macos;
+mod windows;
 mod config;
 mod commands;
 mod state;
@@ -70,9 +71,17 @@ pub fn run() {
                 macos::setup_app();
             }
             
+            if windows::is_windows() {
+                windows::setup_app();
+            }
+            
             // 设置窗口特定配置
             if let Err(e) = macos::setup_window(&main_window) {
-                eprintln!("设置窗口配置时出错: {}", e);
+                eprintln!("设置macOS窗口配置时出错: {}", e);
+            }
+            
+            if let Err(e) = windows::setup_window(&main_window) {
+                eprintln!("设置Windows窗口配置时出错: {}", e);
             }
             
             Ok(())

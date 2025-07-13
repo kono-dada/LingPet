@@ -71,6 +71,7 @@ export const RESPONSE_FORMAT_PROMPT =
   - message: 你的回复内容，使用简体中文。
   - emotion: 你的情绪对应的图片名字，只能从以下选项中选择：${EMOTIONS}。
   - japanese: 你的回复内容的日语翻译，使用日语。
+  你必须直接回复json原文，而不要把它放在任何代码块中。回复中不要出现"\`\`\`json"之类的东西。
   以下是一个回复例子
   [
     {

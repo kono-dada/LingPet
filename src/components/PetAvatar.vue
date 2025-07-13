@@ -24,7 +24,7 @@
 -->
 
 <template>
-  <div class="pet-content" @click.stop="handlePetClick">
+  <div class="pet-content" @mousedown="handlePetClick">
     <div class="avatar-container" :class="{ 'shaking': isShaking }">
       <img 
         :src="`/avatar/${currentEmotion + '.png'}`" 
@@ -40,13 +40,15 @@
       <button 
         class="settings-button"
         :class="{ 'no-border': !showBorder }"
-        @click.stop="openSettings"
+        @click.stop.prevent="openSettings"
+        @mousedown.stop.prevent
+        @mouseup.stop.prevent
         title="打开设置"
       >
         ⚙️
       </button>
     </div>
-    <div class="input-container">
+    <div class="input-container" @mousedown.stop @click.stop>
       <input 
         type="text" 
         v-model="inputMessage"
@@ -140,6 +142,8 @@ function handlePetClick() {
 
 // 打开设置
 function openSettings() {
+  console.log('设置按钮被点击');
+  // 确保事件被正确处理
   emit('open-settings');
 }
 
