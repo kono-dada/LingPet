@@ -1,0 +1,80 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "desktop_pet",
+  "version": "0.1.0",
+  "identifier": "com.desktop-pet.app",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "桌面宠物",
+        "width": 300,
+        "height": 300,
+        "minWidth": 50,
+        "minHeight": 50,
+        "resizable": false,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": true,
+        "fullscreen": false
+      },
+      {
+        "label": "settings",
+        "title": "宠物设置",
+        "url": "/#/settings",
+        "width": 800,
+        "height": 600,
+        "minWidth": 700,
+        "minHeight": 500,
+        "resizable": true,
+        "transparent": false,
+        "decorations": true,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "visible": false,
+        "fullscreen": false,
+        "center": true
+      },
+      {
+        "label": "chat-bubble",
+        "title": "",
+        "url": "/#/chat-bubble",
+        "width": 200,
+        "height": 80,
+        "resizable": false,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "fullscreen": false,
+        "center": false
+      }
+    ],
+    "security": {
+      "csp": null,
+      "dangerousDisableAssetCspModification": true,
+      "capabilities": ["default", "settings", "chat-bubble"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
