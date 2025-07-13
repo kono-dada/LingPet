@@ -24,11 +24,11 @@
 -->
 
 <template>
-  <div class="pet-content" @click.stop="switchEmotion">
+  <div class="pet-content" @click.stop="handlePetClick">
     <div class="avatar-container" :class="{ 'shaking': isShaking }">
       <img 
-        :src="`/avatar/${currentEmotion}`" 
-        :alt="currentEmotion.replace('.png', '')"
+        :src="`/avatar/${currentEmotion + '.png'}`" 
+        :alt="currentEmotion"
         class="pet-avatar"
         :class="{ 'no-border': !showBorder }"
         :style="{ 
@@ -51,19 +51,23 @@
         type="text" 
         v-model="inputMessage"
         @keyup.enter="sendMessage"
-        placeholder="和我聊天吧..."
+        @keydown.enter="preventSendWhenThinking"
+        :readonly="isSending"
+        :placeholder="placeholder"
         class="chat-input"
+        :class="{ 'thinking': isSending }"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { toRefs, withDefaults, ref, onMounted } from "vue";
+import { toRefs, withDefaults, ref, onMounted, computed } from "vue";
 import { usePet } from "../composables/usePet";
 import { useAI } from "../composables/useAI";
+import { useConversation } from "../composables/useConversation";
 import { eventBusService } from "../services/eventBus";
-import { invoke } from '@tauri-apps/api/core';
+import { createNotificationWindow } from "../services/windowFactory";
 
 interface Props {
   petSize: number;
@@ -89,15 +93,28 @@ const isShaking = ref(false);
 
 // 输入框状态
 const inputMessage = ref('');
+const isSending = ref(false);
 
-// AI功能
+// 动态提示文字
+const thinkingMessages = ['正在思考中', '正在思考中.', '正在思考中..', '正在思考中...'];
+const thinkingIndex = ref(0);
+const placeholder = computed(() => {
+  return isSending.value ? thinkingMessages[thinkingIndex.value] : '和我聊天吧...';
+});
+
+// 使用组合式函数
+const { currentEmotion } = usePet();
 const { chatWithPet, loadAIConfig } = useAI();
-
-// 事件总线
+const { isInConversation, startConversation, playNext } = useConversation();
 const eventBus = eventBusService();
 
-// 使用情感管理组合式函数
-const { currentEmotion, switchEmotion: originalSwitchEmotion } = usePet();
+// 抖动效果函数
+function triggerShakeEffect() {
+  isShaking.value = true;
+  setTimeout(() => {
+    isShaking.value = false;
+  }, 600);
+}
 
 // 初始化AI配置
 onMounted(async () => {
@@ -110,18 +127,15 @@ onMounted(async () => {
   });
 });
 
-// 包装switchEmotion函数，添加抖动效果
-function switchEmotion(event: MouseEvent) {
-  // 触发抖动动画
-  isShaking.value = true;
-  
-  // 切换表情
-  originalSwitchEmotion(event);
-  
-  // 动画结束后移除抖动类
-  setTimeout(() => {
-    isShaking.value = false;
-  }, 600);
+// 处理宠物点击 - 用于对话控制
+function handlePetClick() {
+  console.log('宠物被点击，当前对话状态:', isInConversation.value);
+  if (isInConversation.value) {
+    playNext(
+      (emotion) => currentEmotion.value = emotion,
+      triggerShakeEffect
+    );
+  }
 }
 
 // 打开设置
@@ -131,36 +145,67 @@ function openSettings() {
 
 // 发送消息
 async function sendMessage() {
-  if (inputMessage.value.trim()) {
+  if (inputMessage.value.trim() && !isSending.value) {
     const userMessage = inputMessage.value.trim();
-    console.log('发送消息:', userMessage);
+    
+    // 立即清空输入框，这样 placeholder 就能显示
+    inputMessage.value = '';
+    
+    // 设置发送状态
+    isSending.value = true;
+    
+    // 启动思考动画
+    const thinkingTimer = setInterval(() => {
+      thinkingIndex.value = (thinkingIndex.value + 1) % thinkingMessages.length;
+    }, 500);
     
     try {
-      console.log('正在调用AI生成回答...');
+      // 添加一个短暂延迟以确保UI更新
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // 调用AI生成回答
       const aiResponse = await chatWithPet(userMessage);
       
-      console.log('AI回答:', aiResponse);
-      
-      // 显示AI回答的气泡窗口
-      await invoke('show_chat_bubble', {
-        message: aiResponse.message,
-      });
-      
-      console.log('气泡窗口创建命令已发送');
+      if (aiResponse.success && aiResponse.data && aiResponse.data.length > 0) {
+        // 播放多句话对话
+        await playConversation(aiResponse.data);
+      } else {
+        // 显示错误信息
+        console.error('AI回复格式错误或为空:', aiResponse);
+        await createNotificationWindow('AI回复格式错误或为空');
+      }
       
     } catch (error) {
       console.error('AI对话或显示气泡窗口失败:', error);
       
       // 显示错误提示
       const errorMessage = error instanceof Error ? error.message : '未知错误';
-      await invoke('show_chat_bubble', {
-        message: `操作失败: ${errorMessage}`,
-      });
+      await createNotificationWindow(`操作失败: ${errorMessage}`);
+    } finally {
+      // 停止思考动画
+      clearInterval(thinkingTimer);
+      thinkingIndex.value = 0;
+      
+      // 无论成功还是失败，都要重置发送状态
+      isSending.value = false;
     }
-    
-    inputMessage.value = ''; // 清空输入框
+  }
+}
+
+// 播放对话序列
+async function playConversation(messages: Array<{message: string, emotion: string, japanese: string}>) {
+  await startConversation(
+    messages,
+    (emotion) => currentEmotion.value = emotion,
+    triggerShakeEffect
+  );
+}
+
+// 防止在思考状态时重复发送
+function preventSendWhenThinking(event: KeyboardEvent) {
+  if (isSending.value) {
+    event.preventDefault();
+    event.stopPropagation();
   }
 }
 </script>
@@ -311,6 +356,54 @@ async function sendMessage() {
 .chat-input:hover {
   border-color: rgba(255, 255, 255, 0.5);
   background: rgba(255, 255, 255, 0.95);
+}
+
+/* 思考状态样式 */
+.chat-input.thinking,
+.chat-input[readonly] {
+  background: rgba(255, 248, 230, 0.95);
+  border-color: rgba(255, 165, 0, 0.8);
+  color: rgba(100, 100, 100, 0.8);
+  cursor: not-allowed;
+  animation: thinking-breathing 2s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(255, 165, 0, 0.3);
+}
+
+.chat-input.thinking::placeholder,
+.chat-input[readonly]::placeholder {
+  color: rgba(255, 140, 0, 0.9);
+  font-style: italic;
+  font-weight: 600;
+  text-shadow: 0 0 5px rgba(255, 165, 0, 0.5);
+  animation: text-breathing 2s ease-in-out infinite;
+}
+
+/* 呼吸动画效果 */
+@keyframes thinking-breathing {
+  0%, 100% {
+    opacity: 0.85;
+    transform: scale(1);
+    border-color: rgba(255, 165, 0, 0.6);
+    box-shadow: 0 0 8px rgba(255, 165, 0, 0.2);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.015);
+    border-color: rgba(255, 165, 0, 1);
+    box-shadow: 0 0 15px rgba(255, 165, 0, 0.5);
+  }
+}
+
+/* 文本呼吸动画 */
+@keyframes text-breathing {
+  0%, 100% {
+    opacity: 0.8;
+    text-shadow: 0 0 3px rgba(255, 165, 0, 0.3);
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 8px rgba(255, 165, 0, 0.7);
+  }
 }
 
 /* 一惊一乍的伸缩动画 */

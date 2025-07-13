@@ -26,7 +26,10 @@
 // AI 配置管理和对话功能
 import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
-import type { AIConfig, AIResponse, ChatRequest, AIMessage, PetResponse } from '../types/ai';
+import type { AIConfig, AIResponse, ChatRequest, AIMessage, PetResponse, PetResponseItem } from '../types/ai';
+import type { EmotionName } from '../types/emotion';
+import { DEFAULT_CHARACTER_PROMPT, RESPONSE_FORMAT_PROMPT } from '../constants/ai';
+import { EMOTIONS } from '../constants/emotions';
 
 // 默认配置常量
 const DEFAULT_AI_CONFIG: AIConfig = {
@@ -35,7 +38,7 @@ const DEFAULT_AI_CONFIG: AIConfig = {
   model: 'deepseek-chat',
   temperature: 0.7,
   maxTokens: 150,
-  systemPrompt: '',
+  systemPrompt: DEFAULT_CHARACTER_PROMPT,
 };
 
 export function useAI() {
@@ -102,21 +105,72 @@ export function useAI() {
     
     // 检查配置是否完整
     if (!validateAIConfig()) {
-      return { message: '请正确配置AI服务' };
+      return { 
+        success: false, 
+        error: '请正确配置AI服务' 
+      };
     }
 
     try {
       const messages: AIMessage[] = [];
+      
+      // 添加系统提示词和响应格式要求
       if (aiConfig.value.systemPrompt) {
-        messages.push({ role: 'system', content: aiConfig.value.systemPrompt });
+        messages.push({ 
+          role: 'system', 
+          content: aiConfig.value.systemPrompt + '\n\n' + RESPONSE_FORMAT_PROMPT 
+        });
       }
       messages.push({ role: 'user', content: userMessage });
-
+      console.log('发送的消息:', messages);
       const response = await callAI(messages);
-      return { message: response.choices[0]?.message?.content || 'AI服务返回空响应' };
+      console.log('AI响应:', response);
+      const aiResponseContent = response.choices[0]?.message?.content;
+      
+      if (!aiResponseContent) {
+        console.error('AI服务返回空响应');
+        return { 
+          success: false, 
+          error: 'AI服务返回空响应' 
+        };
+      }
+
+      // 解析JSON并转换为PetResponseItem[]
+      try {
+        const parsedResponse = JSON.parse(aiResponseContent);
+        console.log('parsed AI响应:', parsedResponse);
+        
+        // 验证并转换为PetResponseItem
+        if (Array.isArray(parsedResponse)) {
+          const validItems: PetResponseItem[] = parsedResponse.filter(item => 
+            typeof item === 'object' &&
+            typeof item.message === 'string' &&
+            typeof item.emotion === 'string' &&
+            typeof item.japanese === 'string' &&
+            EMOTIONS.includes(item.emotion as EmotionName)
+          ).map(item => ({
+            message: item.message,
+            emotion: item.emotion as EmotionName,
+            japanese: item.japanese
+          }));
+          
+          return validItems.length > 0
+            ? { success: true, data: validItems }
+            : { success: false };
+        }
+        
+        return { success: false };
+      } catch (error) {
+        console.error('AI响应解析失败:', error);
+        return { success: false };
+      }
+      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误';
-      return { message: `对话失败: ${errorMessage}` };
+      return { 
+        success: false, 
+        error: `对话失败: ${errorMessage}` 
+      };
     }
   }
 

@@ -16,6 +16,9 @@
  */
 
 // AI 相关类型定义
+
+import { EmotionName } from "./emotion";
+
 export interface AIMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -55,10 +58,16 @@ export interface ChatRequest {
 }
 
 // 桌宠对话相关类型
-export interface PetResponse {
+export interface PetResponseItem {
   message: string;
-  emotion?: string; // 建议的表情
-  animation?: string; // 建议的动画
+  emotion: EmotionName;
+  japanese: string;
+}
+
+export interface PetResponse {
+  success: boolean;
+  data?: PetResponseItem[];
+  error?: string;
 }
 
 export interface ConversationContext {

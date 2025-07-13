@@ -106,7 +106,7 @@ impl Default for AIConfig {
             base_url: "https://api.deepseek.com/v1".to_string(),
             model: "deepseek-chat".to_string(),
             temperature: 0.7,
-            max_tokens: 150,
+            max_tokens: 2000,
             system_prompt: None,
         }
     }

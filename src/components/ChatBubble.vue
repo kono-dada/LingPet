@@ -26,9 +26,9 @@
 <template>
   <div class="chat-bubble-window">
     <div class="bubble-container">
-      <div class="bubble-content">
-        <div class="bubble-text" :style="{ textAlign }">
-          {{ displayedMessage }}<span v-if="isTyping" class="typing-cursor">|</span>
+      <div class="bubble-content" :style="bubbleStyles">
+        <div class="bubble-text" :style="{ textAlign, color: colorTheme.text }">
+          {{ displayedMessage }}<span v-if="isTyping" class="typing-cursor" :style="{ color: colorTheme.text }">|</span>
         </div>
       </div>
     </div>
@@ -36,8 +36,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, ref, watch, computed } from 'vue';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { getEmotionColorTheme } from '../constants/emotionColors';
+import type { EmotionName } from '../types/emotion';
+import { DEFAULT_EMOTION } from '../constants/emotions';
 
 interface Props {
   message: string;
@@ -55,6 +58,35 @@ const props = withDefaults(defineProps<Props>(), {
 const displayedMessage = ref('');
 const isTyping = ref(false);
 const textAlign = ref<'center' | 'left'>('center');
+
+// 多句话管理
+const messages = ref<Array<{message: string, emotion: string, japanese: string}>>([]);
+const currentIndex = ref(0);
+const totalMessages = ref(0);
+const hasMultipleMessages = ref(false);
+
+// 表情状态管理
+const currentEmotion = ref<EmotionName>(DEFAULT_EMOTION);
+
+// 计算颜色主题
+const colorTheme = computed(() => {
+  return getEmotionColorTheme(currentEmotion.value);
+});
+
+// 计算气泡样式
+const bubbleStyles = computed(() => {
+  const theme = colorTheme.value;
+  return {
+    background: theme.background,
+    borderColor: theme.border,
+    boxShadow: `0 8px 32px ${theme.shadow}, 0 0 0 1px ${theme.border}`,
+    color: theme.text,
+    // 设置 CSS 变量用于动画
+    '--dynamic-shadow': `0 8px 32px ${theme.shadow}`,
+    '--glow-color': theme.shadow,
+    '--border-glow': theme.border
+  };
+});
 
 // 打字机效果
 const typeMessage = async (message: string) => {
@@ -79,23 +111,91 @@ watch(() => props.message, (newMessage) => {
   typeMessage(newMessage);
 }, { immediate: true });
 
+// 关闭窗口
+async function closeWindow() {
+  try {
+    const window = getCurrentWebviewWindow();
+    await window.close();
+  } catch (error) {
+    console.error('关闭气泡窗口失败:', error);
+  }
+}
+
+// 更新表情状态
+function updateEmotion() {
+  const emotionData = localStorage.getItem('currentEmotion');
+  
+  if (emotionData) {
+    try {
+      // 尝试解析JSON，如果失败则直接使用字符串
+      let emotion: string;
+      try {
+        emotion = JSON.parse(emotionData);
+      } catch {
+        emotion = emotionData; // 直接使用字符串
+      }
+      
+      if (emotion && typeof emotion === 'string') {
+        currentEmotion.value = emotion as EmotionName;
+      }
+    } catch (error) {
+      console.error('解析表情数据失败:', error);
+    }
+  }
+}
+
+// 初始化多句话数据
+function initializeMessages() {
+  const messagesJson = localStorage.getItem('bubbleMessages');
+  if (messagesJson) {
+    try {
+      messages.value = JSON.parse(messagesJson);
+      totalMessages.value = messages.value.length;
+      hasMultipleMessages.value = totalMessages.value > 1;
+      currentIndex.value = 0;
+    } catch (error) {
+      console.error('解析消息失败:', error);
+      hasMultipleMessages.value = false;
+    }
+  } else {
+    hasMultipleMessages.value = false;
+  }
+}
+
 onMounted(async () => {
-  const window = getCurrentWebviewWindow();
+  const webviewWindow = getCurrentWebviewWindow();
+  
+  // 初始化多句话数据
+  initializeMessages();
+  
+  // 初始化表情状态
+  updateEmotion();
+  
+  // 监听 localStorage 变化来更新消息和表情
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'bubbleMessage' && e.newValue) {
+      typeMessage(e.newValue);
+    }
+    if (e.key === 'currentEmotion' && e.newValue) {
+      updateEmotion();
+    }
+    if (e.key === 'closeBubble') {
+      closeWindow();
+    }
+  });
   
   // 等待打字完成后再设置自动隐藏
   watch(isTyping, (typing) => {
-    if (!typing && props.autoHide && props.message) {
+    if (!typing && props.autoHide && props.message && !hasMultipleMessages.value) {
       setTimeout(async () => {
         try {
-          await window.close();
+          await webviewWindow.close();
         } catch (error) {
           console.error('关闭气泡窗口失败:', error);
         }
       }, props.autoHideDelay);
     }
   });
-  
-  console.log(`气泡窗口已挂载，消息: "${props.message}"`);
 });
 </script>
 
@@ -123,28 +223,24 @@ onMounted(async () => {
 }
 
 .bubble-content {
-  /* 毛玻璃背景效果 */
-  background: rgba(255, 255, 255, 0.98);
+  /* 毛玻璃背景效果 - 将通过内联样式动态设置背景色 */
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   
-  /* 边框和阴影 */
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  /* 边框和阴影 - 将通过内联样式动态设置 */
+  border: 1px solid transparent;
   border-radius: 20px;
-
   
   position: relative;
   z-index: 1000000;
   width: 260px; /* 固定宽度 */
   min-width: 260px;
   
-  /* 高级毛玻璃效果 */
-  background-image: 
-    linear-gradient(135deg, 
-      rgba(255, 255, 255, 0.99) 0%,
-      rgba(255, 255, 255, 0.96) 50%,
-      rgba(255, 255, 255, 0.94) 100%
-    );
+  /* 添加呼吸闪烁动画 */
+  animation: breathingGlow 4s ease-in-out infinite;
+  
+  /* 确保渐变与动态背景色兼容 */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .bubble-text {
@@ -205,6 +301,39 @@ onMounted(async () => {
   }
   51%, 100% {
     opacity: 0;
+  }
+}
+
+/* 呼吸闪烁动画 */
+@keyframes breathingGlow {
+  0% {
+    transform: scale(1);
+    filter: brightness(1) saturate(1);
+    box-shadow: var(--dynamic-shadow, 0 8px 32px rgba(0, 0, 0, 0.15));
+  }
+  25% {
+    transform: scale(1.015);
+    filter: brightness(1.05) saturate(1.1);
+    box-shadow: var(--dynamic-shadow, 0 8px 32px rgba(0, 0, 0, 0.15)), 
+                0 0 20px var(--glow-color, rgba(0, 0, 0, 0.1));
+  }
+  50% {
+    transform: scale(1.03);
+    filter: brightness(1.1) saturate(1.2);
+    box-shadow: var(--dynamic-shadow, 0 8px 32px rgba(0, 0, 0, 0.15)), 
+                0 0 30px var(--glow-color, rgba(0, 0, 0, 0.15)),
+                0 0 15px var(--glow-color, rgba(0, 0, 0, 0.1));
+  }
+  75% {
+    transform: scale(1.015);
+    filter: brightness(1.05) saturate(1.1);
+    box-shadow: var(--dynamic-shadow, 0 8px 32px rgba(0, 0, 0, 0.15)), 
+                0 0 20px var(--glow-color, rgba(0, 0, 0, 0.1));
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1) saturate(1);
+    box-shadow: var(--dynamic-shadow, 0 8px 32px rgba(0, 0, 0, 0.15));
   }
 }
 

@@ -2,9 +2,8 @@
  * @fileoverview 设置管理组合式函数
  * @description 统一管理各种设置状态，提供设置窗口的打开/关闭功能，处理设置标签页的切换
  * @features
- *   - 设置窗口生命周期管理
+ *   - 设置窗口生命周期管理 (使用窗口工厂)
  *   - 多标签页状态管理
- *   - 窗口配置和位置持久化
  *   - 各设置模块的集成管理
  *   - 响应式状态更新
  * @modules
@@ -19,19 +18,16 @@
  *   - closeSettings: 关闭设置窗口
  *   - appearanceSettings: 外观设置功能
  * @dependencies
- *   - @tauri-apps/api/webviewWindow: 窗口管理
- *   - windowConfig: 窗口配置服务
+ *   - windowFactory: 统一窗口管理
  * @author dada
- * @version 1.0.0
+ * @version 2.0.0
  * @since 2025-07-13
  */
 
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { SETTINGS_TABS, DEFAULT_ACTIVE_TAB } from "../constants/settings-ui";
 import type { SettingsState } from '../types/settings-ui';
-import { windowConfig } from '../services/windowConfig';
-import type { WindowConfig } from '../services/windowConfig';
+import { createSettingsWindow, WindowFactory } from '../services/windowFactory';
 
 // 导入各个设置页面的组合式函数
 import { useAppearanceSettings } from './settings/useAppearanceSettings';
@@ -73,16 +69,6 @@ export function useSettings() {
   });
 
   // ===================
-  // 设置窗口管理
-  // ===================
-  
-  // 设置窗口引用
-  let settingsWindow: WebviewWindow | null = null;
-
-  // 获取窗口配置函数
-  const { getWindowConfig } = windowConfig();
-
-  // ===================
   // UI状态管理方法
   // ===================
   
@@ -111,81 +97,22 @@ export function useSettings() {
   // 打开设置窗口
   async function openSettings() {
     try {
-      // 首先尝试关闭任何现有的设置窗口
-      try {
-        const existingWindow = await WebviewWindow.getByLabel('settings');
-        if (existingWindow) {
-          await existingWindow.close();
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      } catch (error) {
-        // 窗口不存在或已关闭，继续
+      const window = await createSettingsWindow();
+      if (window) {
+        console.log('设置窗口已打开');
       }
-
-      // 获取保存的窗口配置
-      let windowConfig: WindowConfig | null = null;
-      try {
-        windowConfig = await getWindowConfig();
-      } catch (error) {
-        console.warn('获取窗口配置失败:', error);
-      }
-
-      // 设置窗口选项
-      const windowOptions: any = {
-        url: '/#/settings',
-        title: '宠物设置',
-        width: windowConfig?.settings_window_width || 800,
-        height: windowConfig?.settings_window_height || 600,
-        minWidth: 700,
-        minHeight: 500,
-        resizable: true,
-        transparent: false,
-        decorations: true,
-        alwaysOnTop: false,
-        skipTaskbar: false,
-      };
-
-      // 如果有保存的位置，使用保存的位置，否则居中显示
-      if (windowConfig?.settings_window_x !== undefined && windowConfig?.settings_window_y !== undefined) {
-        windowOptions.x = windowConfig.settings_window_x;
-        windowOptions.y = windowConfig.settings_window_y;
-        windowOptions.center = false;
-      } else {
-        windowOptions.center = true;
-      }
-
-      // 创建新的设置窗口
-      settingsWindow = new WebviewWindow('settings', windowOptions);
-
-      // 监听窗口事件
-      settingsWindow.once('tauri://created', () => {
-        console.log('设置窗口创建成功');
-      });
-
-      settingsWindow.once('tauri://destroyed', () => {
-        console.log('设置窗口已销毁');
-        settingsWindow = null;
-      });
-
-      settingsWindow.once('tauri://error', (error) => {
-        console.error('设置窗口错误:', error);
-        settingsWindow = null;
-      });
     } catch (error) {
       console.error('打开设置窗口失败:', error);
-      settingsWindow = null;
     }
   }
 
   // 关闭设置窗口
   async function closeSettings() {
-    if (settingsWindow) {
-      try {
-        await settingsWindow.close();
-      } catch (error) {
-        console.error('关闭设置窗口失败:', error);
-      }
-      settingsWindow = null;
+    try {
+      await WindowFactory.closeWindow('settings');
+      console.log('设置窗口已关闭');
+    } catch (error) {
+      console.error('关闭设置窗口失败:', error);
     }
   }
 

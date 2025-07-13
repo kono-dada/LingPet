@@ -141,9 +141,9 @@
         <div class="setting-control">
           <CustomSlider
             v-model="aiConfigPreview.maxTokens"
-            :min="50"
-            :max="500"
-            :step="10"
+            :min="1000"
+            :max="20000"
+            :step="200"
             unit="字符"
             @change="handleConfigChange"
           />
@@ -161,6 +161,15 @@
           <span class="setting-description">定义宠物的性格和行为规则</span>
         </div>
         <div class="setting-control">
+          <div class="prompt-controls">
+            <button 
+              @click="resetSystemPrompt"
+              class="reset-btn"
+              type="button"
+            >
+              重置为默认
+            </button>
+          </div>
           <textarea
             v-model="aiConfigPreview.systemPrompt"
             class="textarea-input"
@@ -196,7 +205,7 @@
 import { ref, computed } from 'vue';
 import { useAISettings } from '../composables/settings/useAISettings';
 import CustomSlider from './CustomSlider.vue';
-import { AI_CONSTANTS } from '../constants/ai';
+import { AI_CONSTANTS, DEFAULT_CHARACTER_PROMPT } from '../constants/ai';
 
 // 使用 AI 设置 Composable
 const {
@@ -239,6 +248,12 @@ async function handleConfigChange() {
 async function testConnection() {
   if (!canTest.value) return;
   await testAIConnection();
+}
+
+// 重置系统提示词为默认值
+async function resetSystemPrompt() {
+  aiConfigPreview.value.systemPrompt = DEFAULT_CHARACTER_PROMPT;
+  await handleConfigChange();
 }
 </script>
 
@@ -330,6 +345,33 @@ async function testConnection() {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.prompt-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.reset-btn {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  color: #6b7280;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reset-btn:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.reset-btn:active {
+  background-color: #e5e7eb;
 }
 
 .toggle-visibility-btn {
