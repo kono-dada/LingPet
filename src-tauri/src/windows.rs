@@ -23,8 +23,6 @@
 //! - 任务栏图标管理
 //! - 窗口行为优化
 
-use tauri::WebviewWindow;
-
 /// 设置 Windows 应用的全局配置
 #[cfg(target_os = "windows")]
 pub fn setup_app() {

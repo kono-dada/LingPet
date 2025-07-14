@@ -28,7 +28,7 @@ import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import type { AIConfig, AIResponse, ChatRequest, AIMessage, PetResponse, PetResponseItem } from '../../types/ai';
 import type { EmotionName } from '../../types/emotion';
-import { DEFAULT_CHARACTER_PROMPT, RESPONSE_FORMAT_PROMPT } from '../../constants/ai';
+import { DEFAULT_CHARACTER_PROMPT, RESPONSE_FORMAT_PROMPT, USER_PROMPT_WAPPER } from '../../constants/ai';
 import { EMOTIONS } from '../../constants/emotions';
 
 // 默认配置常量
@@ -45,7 +45,7 @@ export function useAI() {
   // ===================
   // 响应式状态
   // ===================
-  
+
   // AI 配置状态
   const aiConfig = ref<AIConfig>({ ...DEFAULT_AI_CONFIG });
   const isConfigured = computed(() => Boolean(aiConfig.value.apiKey && aiConfig.value.baseURL));
@@ -59,8 +59,8 @@ export function useAI() {
    */
   function validateAIConfig(): boolean {
     return Boolean(
-      aiConfig.value.apiKey && 
-      aiConfig.value.baseURL && 
+      aiConfig.value.apiKey &&
+      aiConfig.value.baseURL &&
       aiConfig.value.model
     );
   }
@@ -84,6 +84,7 @@ export function useAI() {
       },
       body: JSON.stringify({
         model: aiConfig.value.model,
+        response_format: { type: 'json_object' },
         ...requestBody,
       }),
     });
@@ -102,36 +103,39 @@ export function useAI() {
   async function chatWithPet(userMessage: string): Promise<PetResponse> {
     // 每次对话前先加载最新配置，确保配置同步
     await loadAIConfig();
-    
+
     // 检查配置是否完整
     if (!validateAIConfig()) {
-      return { 
-        success: false, 
-        error: '请正确配置AI服务' 
+      return {
+        success: false,
+        error: '请正确配置AI服务'
       };
     }
 
     try {
       const messages: AIMessage[] = [];
-      
+
       // 添加系统提示词和响应格式要求
       if (aiConfig.value.systemPrompt) {
-        messages.push({ 
-          role: 'system', 
-          content: aiConfig.value.systemPrompt + '\n\n' + RESPONSE_FORMAT_PROMPT 
+        messages.push({
+          role: 'system',
+          content: aiConfig.value.systemPrompt + '\n\n' + RESPONSE_FORMAT_PROMPT
         });
       }
-      messages.push({ role: 'user', content: userMessage });
+      messages.push({ 
+        role: 'user', 
+        content: USER_PROMPT_WAPPER.replace('{}', userMessage)
+      });
       console.log('发送的消息:', messages);
       const response = await callAI(messages);
       console.log('AI响应:', response);
       const aiResponseContent = response.choices[0]?.message?.content;
-      
+
       if (!aiResponseContent) {
         console.error('AI服务返回空响应');
-        return { 
-          success: false, 
-          error: 'AI服务返回空响应' 
+        return {
+          success: false,
+          error: 'AI服务返回空响应'
         };
       }
 
@@ -139,10 +143,10 @@ export function useAI() {
       try {
         const parsedResponse = JSON.parse(aiResponseContent);
         console.log('parsed AI响应:', parsedResponse);
-        
+
         // 验证并转换为PetResponseItem
         if (Array.isArray(parsedResponse)) {
-          const validItems: PetResponseItem[] = parsedResponse.filter(item => 
+          const validItems: PetResponseItem[] = parsedResponse.filter(item =>
             typeof item === 'object' &&
             typeof item.message === 'string' &&
             typeof item.emotion === 'string' &&
@@ -153,23 +157,23 @@ export function useAI() {
             emotion: item.emotion as EmotionName,
             japanese: item.japanese
           }));
-          
+
           return validItems.length > 0
             ? { success: true, data: validItems }
             : { success: false };
         }
-        
+
         return { success: false };
       } catch (error) {
         console.error('AI响应解析失败:', error);
         return { success: false };
       }
-      
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误';
-      return { 
-        success: false, 
-        error: `对话失败: ${errorMessage}` 
+      return {
+        success: false,
+        error: `对话失败: ${errorMessage}`
       };
     }
   }
@@ -204,22 +208,21 @@ export function useAI() {
   async function testAIConnection(): Promise<{ success: boolean; message: string }> {
     // 先加载最新配置
     await loadAIConfig();
-    
+
     // 检查配置是否完整
     if (!validateAIConfig()) {
       return { success: false, message: '请正确配置AI服务' };
     }
 
     try {
-      const messages: AIMessage[] = [
-        { role: 'user', content: '你好' }
-      ];
-      
-      await callAI(messages);
-      return { success: true, message: '连接成功' };
+      const messages: PetResponse = await chatWithPet('测试连接');
+      if (messages.success) {
+        return { success: true, message: 'AI服务连接成功' };
+      }
+      return { success: false, message: messages.error || 'AI服务连接失败' };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误';
-      return { success: false, message: `连接失败: ${errorMessage}` };
+      return { success: false, message: `连接测试失败: ${errorMessage}` };
     }
   }
 
@@ -227,15 +230,15 @@ export function useAI() {
     // 响应式状态
     aiConfig,
     isConfigured,
-    
+
     // 配置管理
     loadAIConfig,
     saveAIConfig,
     testAIConnection,
-    
+
     // AI对话
     chatWithPet,
-    
+
     // 常量
     DEFAULT_AI_CONFIG,
   };

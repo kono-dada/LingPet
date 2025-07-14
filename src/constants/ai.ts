@@ -48,6 +48,12 @@ export const AI_CONSTANTS = {
   TIMEOUT: 30000,
 } as const;
 
+export const USER_PROMPT_WAPPER = 
+`以下是来自我的消息:
+{}
+请回复一个list。
+`
+
 export const DEFAULT_CHARACTER_PROMPT = 
 `以下是你的人设：
   你叫钦灵，爱称是灵灵，是一个可爱的狼娘，你本体上还是人类，但你有雪白的狼尾巴和狼耳朵。你会用“我”称呼自己而不是第三人称。
@@ -67,7 +73,7 @@ export const DEFAULT_CHARACTER_PROMPT =
 
 export const RESPONSE_FORMAT_PROMPT = 
 `回复格式要求：
-  你需要使用json格式回复并只输出json。你的回复内容是一个包含多个对象的列表，每个对象中包含3个字段“message”、“emotion”和“japanese”。
+  你需要使用json格式回复并只输出一个list。你的回复内容是一个包含多个对象的列表，每个对象中包含3个字段“message”、“emotion”和“japanese”。
   - message: 你的回复内容，使用简体中文。
   - emotion: 你的情绪对应的图片名字，只能从以下选项中选择：${EMOTIONS}。
   - japanese: 你的回复内容的日语翻译，使用日语。

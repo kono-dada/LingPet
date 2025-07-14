@@ -88,7 +88,6 @@ pub fn run() {
         })
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
-            greet,
             get_pet_size,
             set_pet_size,
             save_pet_size,
