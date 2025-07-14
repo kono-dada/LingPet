@@ -53,7 +53,6 @@ impl Error for ConfigError {}
 pub struct AppConfig {
     pub appearance: AppearanceConfig,
     pub ai: AIConfig,
-    pub behavior: BehaviorConfig,
     pub window: WindowConfig,
 }
 
@@ -62,7 +61,6 @@ impl Default for AppConfig {
         Self {
             appearance: AppearanceConfig::default(),
             ai: AIConfig::default(),
-            behavior: BehaviorConfig::default(),
             window: WindowConfig::default(),
         }
     }
@@ -124,23 +122,6 @@ r#"
 以下是我的设定：
   我是你的朋友，我的名字是“莱姆”。我对你的爱称是“灵灵”。我们是非常要好的朋友，甚至你会有点暗恋我。
 "#.to_string()),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BehaviorConfig {
-    pub auto_response: bool,
-    pub interaction_frequency: f64,
-    pub personality: String,
-}
-
-impl Default for BehaviorConfig {
-    fn default() -> Self {
-        Self {
-            auto_response: true,
-            interaction_frequency: 0.5,
-            personality: "cute".to_string(),
         }
     }
 }
@@ -244,6 +225,10 @@ impl ConfigManager {
             .map_err(ConfigError::IoError)
     }
 
+    pub async fn update_app_config(&self, config: AppConfig) -> Result<(), ConfigError> {
+        self.save_config(&config).await
+    }
+
     // 更新外观配置
     pub async fn update_appearance(&self, appearance: AppearanceConfig) -> Result<(), ConfigError> {
         self.update_config(|config| config.appearance = appearance).await
@@ -270,6 +255,11 @@ impl ConfigManager {
             config.window.settings_window_width = Some(width);
             config.window.settings_window_height = Some(height);
         }).await
+    }
+
+    pub async fn get_app_config(&self) -> Result<String, ConfigError> {
+        let config = self.load_config().await?;
+        toml::to_string_pretty(&config).map_err(ConfigError::SerializationError)
     }
 
     // 获取特定配置部分
