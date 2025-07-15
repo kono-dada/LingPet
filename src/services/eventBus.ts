@@ -21,106 +21,23 @@
 
 // 事件总线组合式函数，用于组件间通信
 import { listen, emit } from '@tauri-apps/api/event';
+import { AppSetting } from '../types/settings';
 
 export function eventBusService() {
-  // 监听设置预览事件
-  async function onPreviewPetSize(callback: (size: number) => void) {
-    return await listen('preview-pet-size', (event) => {
-      callback(event.payload as number);
+  // 设置变更，一般需要保存
+  async function emitConfigChanged(appConfig: AppSetting) {
+    await emit('config-changed', appConfig);
+  }
+
+  async function onConfigChanged(receiver: string, callback: (appConfig: AppSetting) => void) {
+    await listen('config-changed', (event) => {
+      console.log(`${receiver} received a config-changed event`);
+      callback(event.payload as AppSetting);
     });
-  }
-
-  async function onPreviewPetOpacity(callback: (opacity: number) => void) {
-    return await listen('preview-pet-opacity', (event) => {
-      callback(event.payload as number);
-    });
-  }
-
-  async function onPreviewPetBorder(callback: (showBorder: boolean) => void) {
-    return await listen('preview-pet-border', (event) => {
-      callback(event.payload as boolean);
-    });
-  }
-
-  // 监听设置确定事件
-  async function onPetSizeChanged(callback: (size: number) => void) {
-    return await listen('pet-size-changed', (event) => {
-      callback(event.payload as number);
-    });
-  }
-
-  async function onPetOpacityChanged(callback: (opacity: number) => void) {
-    return await listen('pet-opacity-changed', (event) => {
-      callback(event.payload as number);
-    });
-  }
-
-  async function onPetBorderChanged(callback: (showBorder: boolean) => void) {
-    return await listen('pet-border-changed', (event) => {
-      callback(event.payload as boolean);
-    });
-  }
-
-  // 监听设置保存完成事件
-  async function onPetSizeSaved(callback: (size: number) => void) {
-    return await listen('pet-size-saved', (event) => {
-      callback(event.payload as number);
-    });
-  }
-
-  async function onPetOpacitySaved(callback: (opacity: number) => void) {
-    return await listen('pet-opacity-saved', (event) => {
-      callback(event.payload as number);
-    });
-  }
-
-  async function onPetBorderSaved(callback: (showBorder: boolean) => void) {
-    return await listen('pet-border-saved', (event) => {
-      callback(event.payload as boolean);
-    });
-  }
-
-  // 监听AI配置保存事件
-  async function onAIConfigSaved(callback: () => void) {
-    return await listen('ai-config-saved', () => {
-      callback();
-    });
-  }
-
-  // 发射事件
-  async function emitPreviewPetSize(size: number) {
-    await emit('preview-pet-size', size);
-  }
-
-  async function emitPreviewPetOpacity(opacity: number) {
-    await emit('preview-pet-opacity', opacity);
-  }
-
-  async function emitPreviewPetBorder(showBorder: boolean) {
-    await emit('preview-pet-border', showBorder);
-  }
-
-  // 发射AI配置保存事件
-  async function emitAIConfigSaved() {
-    await emit('ai-config-saved');
   }
 
   return {
-    // 监听器
-    onPreviewPetSize,
-    onPreviewPetOpacity,
-    onPreviewPetBorder,
-    onPetSizeChanged,
-    onPetOpacityChanged,
-    onPetBorderChanged,
-    onPetSizeSaved,
-    onPetOpacitySaved,
-    onPetBorderSaved,
-    onAIConfigSaved,
-    // 发射器
-    emitPreviewPetSize,
-    emitPreviewPetOpacity,
-    emitPreviewPetBorder,
-    emitAIConfigSaved,
+    onConfigChanged,
+    emitConfigChanged,
   };
 }

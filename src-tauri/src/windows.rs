@@ -35,7 +35,7 @@ pub fn setup_app() {
 pub fn setup_window(window: &WebviewWindow) -> Result<(), Box<dyn std::error::Error>> {
     // 对于透明无边框窗口，禁用阴影以获得真正的透明效果
     // 这解决了Windows上透明窗口仍有阴影的问题
-    // window.set_shadow(false)?;
+    window.set_shadow(false)?;
     
     // 确保窗口可以拖拽
     window.set_ignore_cursor_events(false)?;

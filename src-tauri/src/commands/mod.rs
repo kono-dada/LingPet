@@ -14,11 +14,8 @@
  * @since 2025-07-13
  */
 
-pub mod appearance;
-pub mod ai;
-pub mod window;
+pub mod config;
+pub mod app;
 
-// 重新导出所有命令函数，方便在 lib.rs 中使用
-pub use appearance::*;
-pub use ai::*;
-pub use window::*;
+pub use config::*;
+pub use app::quit_app;

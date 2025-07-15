@@ -19,8 +19,8 @@
  */
 
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { windowConfig } from './windowConfig';
-import type { WindowConfig } from './windowConfig';
+import { useConfigStore } from '../stores/config';
+import type { WindowSetting } from '../types/settings';
 
 // 窗口类型定义
 export type WindowType = 'settings' | 'chat-bubble' | 'dialog';
@@ -98,7 +98,7 @@ class WindowInstance {
 // 窗口工厂类
 export class WindowFactory {
   private static instances = new Map<string, WindowInstance>();
-  private static windowConfigService = windowConfig();
+  static configStore = useConfigStore();
 
   /**
    * 创建窗口的主入口
@@ -143,21 +143,14 @@ export class WindowFactory {
    */
   private static async createSettingsWindow(config: SettingsWindowConfig): Promise<WebviewWindow | null> {
     // 获取保存的窗口配置
-    let savedConfig: WindowConfig | null = null;
-    if (config.persistPosition) {
-      try {
-        savedConfig = await this.windowConfigService.getWindowConfig();
-      } catch (error) {
-        console.warn('获取窗口配置失败:', error);
-      }
-    }
+    const savedConfig: WindowSetting = this.configStore.window;
 
     // 设置窗口选项
     const windowOptions: any = {
       url: config.url || '/#/settings',
       title: config.title || '设置',
-      width: savedConfig?.settings_window_width || config.width || 800,
-      height: savedConfig?.settings_window_height || config.height || 600,
+      width: savedConfig.settings_window_width || config.width || 800,
+      height: savedConfig.settings_window_height || config.height || 600,
       minWidth: config.minWidth || 700,
       minHeight: config.minHeight || 500,
       resizable: config.resizable !== false,
@@ -192,10 +185,10 @@ export class WindowFactory {
 
       // 计算气泡窗口属性
       const bubbleProps = await this.calculateBubbleWindowProps(mainWindow, config.message);
-      
+
       // 构建URL
       const url = `/#/chat-bubble?message=${encodeURIComponent(config.message)}&autoHide=${config.autoHide}&autoHideDelay=${config.autoHideDelay}`;
-      
+
       // 创建窗口配置 (参考设置窗口的有效参数)
       const windowOptions: any = {
         url: url,
@@ -214,7 +207,7 @@ export class WindowFactory {
       };
 
       const window = new WebviewWindow(config.label, windowOptions);
-      
+
       // 设置窗口始终置顶
       window.once('tauri://created', async () => {
         try {
@@ -239,27 +232,27 @@ export class WindowFactory {
     // 获取主窗口信息
     const [mainPosition, mainSize, scaleFactor] = await Promise.all([
       mainWindow.innerPosition(),
-      mainWindow.innerSize(), 
+      mainWindow.innerSize(),
       mainWindow.scaleFactor()
     ]);
 
     // 根据消息长度动态计算气泡尺寸
     const messageLength = message.length;
     const bubbleWidth = 320;
-    
+
     // 根据消息长度估算高度（考虑换行）
     const estimatedLines = Math.ceil(messageLength / 15);
     const bubbleHeight = Math.min(Math.max(estimatedLines * 24 + 60, 80), 250);
-    
+
     // 将物理坐标转换为逻辑坐标
     const logicalMainX = mainPosition.x / scaleFactor;
     const logicalMainY = mainPosition.y / scaleFactor;
     const logicalMainWidth = mainSize.width / scaleFactor;
-    
+
     // 计算气泡逻辑位置：主窗口正上方居中
     const bubbleX = logicalMainX + (logicalMainWidth / 2) - (bubbleWidth / 2);
     const bubbleY = logicalMainY - bubbleHeight - 10; // 添加10px间距
-    
+
     return {
       width: bubbleWidth,
       height: bubbleHeight,
@@ -333,16 +326,24 @@ export class WindowFactory {
           const position = await window.innerPosition();
           const size = await window.innerSize();
           const scaleFactor = await window.scaleFactor();
-          await this.windowConfigService.saveSettingsWindowBounds(
-            position.x / scaleFactor,
-            position.y / scaleFactor,
-            size.width / scaleFactor,
-            size.height / scaleFactor
-          );
+          const logicalPosition = {
+            x: position.x / scaleFactor,
+            y: position.y / scaleFactor,
+          };
+          const logicalSize = {
+            width: size.width / scaleFactor,
+            height: size.height / scaleFactor,
+          };
+          // 更新配置
+          this.configStore.config.window.settings_window_x = logicalPosition.x;
+          this.configStore.config.window.settings_window_y = logicalPosition.y;
+          this.configStore.config.window.settings_window_width = logicalSize.width;
+          this.configStore.config.window.settings_window_height = logicalSize.height;
+          console.log('保存设置窗口位置:', this.configStore.window);
         } catch (error) {
           console.error('保存设置窗口位置失败:', error);
         }
-      }, 500);
+      }, 200);
     };
 
     // 监听窗口移动和调整大小

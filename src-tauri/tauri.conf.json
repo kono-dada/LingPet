@@ -25,8 +25,7 @@
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "visible": true,
-        "fullscreen": false,
-        "shadow": false
+        "fullscreen": false
       },
       {
         "label": "settings",

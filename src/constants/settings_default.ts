@@ -16,7 +16,8 @@
  */
 
 // 设置默认值和限制常量
-import type { PetSettings, SettingsConstraints } from '../types/settings';
+import type { AppSetting, SettingsConstraints } from '../types/settings';
+import { DEFAULT_CHARACTER_PROMPT } from './ai';
 
 export const SETTINGS_CONSTRAINTS: SettingsConstraints = {
   minSize: 100,
@@ -25,8 +26,26 @@ export const SETTINGS_CONSTRAINTS: SettingsConstraints = {
   maxOpacity: 1.0,
 };
 
-export const DEFAULT_SETTINGS: PetSettings = {
-  size: 150,
-  opacity: 1.0,
-  showBorder: true,
+export const DEFAULT_SETTINGS: AppSetting = {
+  appearance: {
+    pet_size: 150,
+    pet_opacity: 1.0,
+    pet_show_border: true,
+  },
+  ai: {
+    api_key: '',
+    base_url: 'https://api.deepseek.com/v1',
+    model: 'deepseek-chat',
+    temperature: 0.7,
+    max_tokens: 1024,
+    system_prompt: DEFAULT_CHARACTER_PROMPT,
+  },
+  window: {
+    main_window_x: 100,
+    main_window_y: 100,
+    settings_window_x: 200,
+    settings_window_y: 200,
+    settings_window_width: 800,
+    settings_window_height: 600,
+  },
 };

@@ -64,31 +64,23 @@
 </template>
 
 <script setup lang="ts">
-import { toRefs, withDefaults, ref, onMounted, computed } from "vue";
+import { toRefs, ref, onMounted, computed } from "vue";
 import { usePet } from "../composables/chat/usePet";
-import { useAI } from "../composables/chat/useAI";
+import { useAIService } from "../services/aiService";
 import { useConversation } from "../composables/chat/useConversation";
-import { eventBusService } from "../services/eventBus";
-import { createNotificationWindow } from "../services/windowFactory";
+// import { eventBusService } from "../services/eventBus";
+import { createNotificationWindow, createSettingsWindow } from "../services/windowFactory";
 
 interface Props {
   petSize: number;
-  showBorder?: boolean;
+  showBorder: boolean;
 }
-
-interface Emits {
-  (e: 'open-settings'): void;
-}
-
-const emit = defineEmits<Emits>();
 
 // 设置默认值
-const props = withDefaults(defineProps<Props>(), {
-  showBorder: true
-});
+const props = defineProps<Props>();
 
 // 解构 props
-const { showBorder } = toRefs(props);
+const { showBorder, petSize } = toRefs(props);
 
 // 抖动状态
 const isShaking = ref(false);
@@ -106,9 +98,9 @@ const placeholder = computed(() => {
 
 // 使用组合式函数
 const { currentEmotion } = usePet();
-const { chatWithPet, loadAIConfig } = useAI();
+const { chatWithPet } = useAIService();
 const { isInConversation, startConversation, playNext } = useConversation();
-const eventBus = eventBusService();
+// const eventBus = eventBusService();
 
 // 抖动效果函数
 function triggerShakeEffect() {
@@ -120,13 +112,6 @@ function triggerShakeEffect() {
 
 // 初始化AI配置
 onMounted(async () => {
-  await loadAIConfig();
-  
-  // 监听AI配置保存事件，自动重新加载配置
-  await eventBus.onAIConfigSaved(async () => {
-    console.log('检测到AI配置变更，重新加载配置...');
-    await loadAIConfig();
-  });
 });
 
 // 处理宠物点击 - 用于对话控制
@@ -142,9 +127,8 @@ function handlePetClick() {
 
 // 打开设置
 function openSettings() {
-  console.log('设置按钮被点击');
-  // 确保事件被正确处理
-  emit('open-settings');
+  console.log('打开设置窗口'); 
+  createSettingsWindow();
 }
 
 // 发送消息
@@ -164,8 +148,6 @@ async function sendMessage() {
     }, 500);
     
     try {
-      // 添加一个短暂延迟以确保UI更新
-      await new Promise(resolve => setTimeout(resolve, 100));
       
       // 调用AI生成回答
       const aiResponse = await chatWithPet(userMessage);
@@ -176,7 +158,7 @@ async function sendMessage() {
       } else {
         // 显示错误信息
         console.error('AI回复格式错误或为空:', aiResponse);
-        await createNotificationWindow('AI回复格式错误或为空');
+        await createNotificationWindow(`AI回复格式错误或为空: ${JSON.stringify(aiResponse)}`);
       }
       
     } catch (error) {

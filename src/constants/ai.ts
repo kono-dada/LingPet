@@ -48,7 +48,7 @@ export const AI_CONSTANTS = {
   TIMEOUT: 30000,
 } as const;
 
-export const USER_PROMPT_WAPPER = 
+export const USER_PROMPT_WRAPPER = 
 `以下是来自我的消息:
 {}
 请回复一个list。

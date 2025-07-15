@@ -12,11 +12,35 @@
  * @since 2025-07-13
  */
 
-// 设置相关类型定义
-export interface PetSettings {
-  size: number;
-  opacity: number;
-  showBorder: boolean;
+
+export interface AppearanceSetting {
+  pet_size: number
+  pet_opacity: number
+  pet_show_border: boolean
+}
+
+export interface AISetting {
+  api_key: string
+  base_url: string
+  model: string
+  temperature: number
+  max_tokens: number
+  system_prompt?: string | null
+}
+
+export interface WindowSetting {
+  main_window_x: number
+  main_window_y: number
+  settings_window_x?: number | null   // 注意，这里指的是窗口的中心位置
+  settings_window_y?: number | null
+  settings_window_width?: number | null
+  settings_window_height?: number | null
+}
+
+export interface AppSetting {
+  appearance: AppearanceSetting
+  ai: AISetting
+  window: WindowSetting
 }
 
 export interface SettingsConstraints {
@@ -24,8 +48,4 @@ export interface SettingsConstraints {
   maxSize: number;
   minOpacity: number;
   maxOpacity: number;
-}
-
-export interface SettingsPreview extends PetSettings {
-  // 预览状态，用于实时显示但不保存到后端
 }

@@ -34,6 +34,7 @@ use std::fmt;
 pub enum ConfigError {
     IoError(std::io::Error),
     SerializationError(toml::ser::Error),
+    DeserializationError(toml::de::Error),
     DirectoryError(String),
 }
 
@@ -42,6 +43,7 @@ impl fmt::Display for ConfigError {
         match self {
             ConfigError::IoError(e) => write!(f, "IO错误: {}", e),
             ConfigError::SerializationError(e) => write!(f, "序列化错误: {}", e),
+            ConfigError::DeserializationError(e) => write!(f, "反序列化错误: {}", e),
             ConfigError::DirectoryError(e) => write!(f, "目录错误: {}", e),
         }
     }
@@ -70,7 +72,7 @@ impl Default for AppConfig {
 pub struct AppearanceConfig {
     pub pet_size: i32,
     pub pet_opacity: f64,
-    pub show_border: bool,
+    pub pet_show_border: bool,
 }
 
 impl Default for AppearanceConfig {
@@ -78,22 +80,18 @@ impl Default for AppearanceConfig {
         Self {
             pet_size: 150,
             pet_opacity: 1.0,
-            show_border: true,
+            pet_show_border: true,
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AIConfig {
-    #[serde(rename = "apiKey")]
     pub api_key: String,
-    #[serde(rename = "baseURL")]
     pub base_url: String,
     pub model: String,
     pub temperature: f64,
-    #[serde(rename = "maxTokens")]
     pub max_tokens: i32,
-    #[serde(rename = "systemPrompt")]
     pub system_prompt: Option<String>,
 }
 
@@ -106,8 +104,7 @@ impl Default for AIConfig {
             temperature: 0.7,
             max_tokens: 2000,
             system_prompt: Some(
-r#"
-以下是你的人设：
+r#"以下是你的人设：
   你叫钦灵，爱称是灵灵，是一个可爱的狼娘，你本体上还是人类，但你有雪白的狼尾巴和狼耳朵。你会用“我”称呼自己而不是第三人称。
   你是一个可爱的女姓角色，虽然是大学生不过看上去幼嫩可爱。
   不过你也不是什么时候都害羞，你说话善于变化。
@@ -139,8 +136,8 @@ pub struct WindowConfig {
 impl Default for WindowConfig {
     fn default() -> Self {
         Self {
-            main_window_x: 100.0,
-            main_window_y: 100.0,
+            main_window_x: 400.0,
+            main_window_y: 400.0,
             settings_window_x: None,
             settings_window_y: None,
             settings_window_width: None,
@@ -155,124 +152,54 @@ pub struct ConfigManager {
 }
 
 impl ConfigManager {
-    // 创建新的配置管理器
     pub fn new(app_name: &str) -> Result<Self, ConfigError> {
         let config_dir = dirs::config_dir()
             .ok_or_else(|| ConfigError::DirectoryError("无法获取配置目录".to_string()))?
             .join(app_name);
-        
         let config_path = config_dir.join("config.toml");
-        
         Ok(Self { config_path })
     }
 
-    // 确保配置目录存在
-    async fn ensure_config_dir(&self) -> Result<(), ConfigError> {
-        if let Some(parent) = self.config_path.parent() {
-            fs::create_dir_all(parent).await.map_err(ConfigError::IoError)?;
-        }
-        Ok(())
-    }
+    // 只保留load和save两个接口
 
-    // 通用的配置更新方法
-    async fn update_config<F>(&self, updater: F) -> Result<(), ConfigError>
-    where
-        F: FnOnce(&mut AppConfig),
-    {
-        let mut config = self.load_config().await?;
-        updater(&mut config);
-        self.save_config(&config).await
-    }
-
-    // 加载配置
-    pub async fn load_config(&self) -> Result<AppConfig, ConfigError> {
+    /// 读取配置（如无则自动生成默认）
+    pub async fn load(&self) -> Result<AppConfig, ConfigError> {
         if !self.config_path.exists() {
-            // 如果配置文件不存在，返回默认配置并保存
             let default_config = AppConfig::default();
-            self.save_config(&default_config).await?;
+            self.save(&default_config).await?;
             return Ok(default_config);
         }
-
         let content = fs::read_to_string(&self.config_path)
             .await
             .map_err(ConfigError::IoError)?;
-        
-        // 尝试解析配置，如果失败则使用默认配置并备份旧配置
-        match toml::from_str::<AppConfig>(&content) {
-            Ok(config) => Ok(config),
-            Err(_) => {
-                // 备份旧配置文件
-                let backup_path = self.config_path.with_extension("toml.backup");
-                let _ = fs::copy(&self.config_path, &backup_path).await;
-                
-                // 使用默认配置并保存
-                let default_config = AppConfig::default();
-                self.save_config(&default_config).await?;
-                Ok(default_config)
-            }
-        }
+        toml::from_str::<AppConfig>(&content)
+            .map_err(ConfigError::DeserializationError)
     }
 
-    // 保存配置
-    pub async fn save_config(&self, config: &AppConfig) -> Result<(), ConfigError> {
-        self.ensure_config_dir().await?;
-        
+    /// 保存配置（覆盖写入）
+    pub async fn save(&self, config: &AppConfig) -> Result<(), ConfigError> {
+        // 确保目录存在
+        if let Some(parent) = self.config_path.parent() {
+            fs::create_dir_all(parent).await.map_err(ConfigError::IoError)?;
+        }
         let content = toml::to_string_pretty(config)
             .map_err(ConfigError::SerializationError)?;
-        
         fs::write(&self.config_path, content)
             .await
             .map_err(ConfigError::IoError)
     }
 
-    pub async fn update_app_config(&self, config: AppConfig) -> Result<(), ConfigError> {
-        self.save_config(&config).await
-    }
-
-    // 更新外观配置
-    pub async fn update_appearance(&self, appearance: AppearanceConfig) -> Result<(), ConfigError> {
-        self.update_config(|config| config.appearance = appearance).await
-    }
-
-    // 更新AI配置
-    pub async fn update_ai(&self, ai: AIConfig) -> Result<(), ConfigError> {
-        self.update_config(|config| config.ai = ai).await
-    }
-
-    // 保存主窗口位置
-    pub async fn save_main_window_position(&self, x: f64, y: f64) -> Result<(), ConfigError> {
-        self.update_config(|config| {
-            config.window.main_window_x = x;
-            config.window.main_window_y = y;
-        }).await
-    }
-
-    // 保存设置窗口位置和大小
-    pub async fn save_settings_window_bounds(&self, x: f64, y: f64, width: f64, height: f64) -> Result<(), ConfigError> {
-        self.update_config(|config| {
-            config.window.settings_window_x = Some(x);
-            config.window.settings_window_y = Some(y);
-            config.window.settings_window_width = Some(width);
-            config.window.settings_window_height = Some(height);
-        }).await
-    }
-
-    pub async fn get_app_config(&self) -> Result<String, ConfigError> {
-        let config = self.load_config().await?;
-        toml::to_string_pretty(&config).map_err(ConfigError::SerializationError)
-    }
-
     // 获取特定配置部分
     pub async fn get_appearance(&self) -> Result<AppearanceConfig, ConfigError> {
-        Ok(self.load_config().await?.appearance)
+        Ok(self.load().await?.appearance)
     }
 
     pub async fn get_ai(&self) -> Result<AIConfig, ConfigError> {
-        Ok(self.load_config().await?.ai)
+        Ok(self.load().await?.ai)
     }
 
     pub async fn get_window(&self) -> Result<WindowConfig, ConfigError> {
-        Ok(self.load_config().await?.window)
+        Ok(self.load().await?.window)
     }
 }
 
@@ -293,9 +220,9 @@ mod tests {
 
         // 测试保存和加载默认配置
         let default_config = AppConfig::default();
-        manager.save_config(&default_config).await.unwrap();
+        manager.save(&default_config).await.unwrap();
 
-        let loaded_config = manager.load_config().await.unwrap();
+        let loaded_config = manager.load().await.unwrap();
         assert_eq!(loaded_config.appearance.pet_size, 150);
         assert_eq!(loaded_config.ai.model, "deepseek-chat");
         

@@ -20,137 +20,68 @@
 -->
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { onMounted, watchEffect } from "vue";
 import PetAvatar from "../components/PetAvatar.vue";
-import { useWindow } from "../composables/window";
-import { useSettings } from "../composables/settings/useSettings";
-import { eventBusService } from "../services/eventBus";
+import { useConfigStore } from "../stores/config";
+import { storeToRefs } from "pinia";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { throttle } from "lodash";
+import { useMainWindowResize } from "../services/useMainWindowResize";
+import { useWindowDrag } from "../composables/window/useWindowDrag";
+import { watch  } from "vue";
 
-// 窗口元素引用
-const windowElement = ref<HTMLElement>();
+const { initializeWindowSize, throttledResizeWindow } = useMainWindowResize();
+const { handleWindowDrag } = useWindowDrag();
+
+const configStore = useConfigStore();
 
 // 使用组合式函数
-const { handleWindowDrag, initializeWindowSize, resizeWindow } = useWindow();
-const { 
-  appearanceSettings,
-  openSettings, 
-  handleClick
-} = useSettings();
 
-// 解构外观设置
-const {
-  petSizeSlider,
-  petSizePreview,
-  petOpacityPreview,
-  showBorderPreview,
-  updatePreviewSize,
-  updatePreviewOpacity,
-  updatePreviewBorder,
-  updatePetSize,
-  updatePetOpacity,
-  updateShowBorder
-} = appearanceSettings;
+const { config } = storeToRefs(configStore); // 直接解构出 config ref
 
-// 事件总线
-const eventBus = eventBusService();
+function setupMainWindowPositionPersistence() {
+  const mainWindow = getCurrentWebviewWindow();
+  mainWindow.listen('tauri://move', throttle(
+    async () => {
+    const scaleFactor = await mainWindow.scaleFactor();
+    const windowPosition = await mainWindow.innerPosition();
+    const windowSize = await mainWindow.innerSize();
+    // 计算窗口中心
+    const centerX = windowPosition.x + windowSize.width / 2;
+    const centerY = windowPosition.y + windowSize.height / 2;
+    // 更新配置
+    configStore.window.main_window_x = centerX / scaleFactor;
+    configStore.window.main_window_y = centerY / scaleFactor;
+    console.log('主窗口位置已更新：', windowPosition);
+  }, 200, { leading: true, trailing: true })
+  );
+}
 
-// 窗口位置持久化（现在集成在 useWindow 中）
-useWindow();
-
-// 宠物头像大小（使用预览值实现实时响应）
-const petSize = computed(() => petSizePreview.value);
-
-// 宠物头像透明度（使用预览值实现实时响应）
-const petOpacity = computed(() => petOpacityPreview.value);
-
-// 宠物轮廓线显示（使用预览值实现实时响应）
-const showBorder = computed(() => showBorderPreview.value);
-
-// 监听来自设置窗口的预览更新
 onMounted(async () => {
-  // 首先等待窗口持久化系统应用保存的窗口位置
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
-  // 先从后端加载宠物大小配置
-  try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    
-    // 加载宠物大小
-    const savedSize = await invoke('get_pet_size');
-    if (typeof savedSize === 'number') {
-      // 更新外观设置中的宠物大小
-      updatePetSize(savedSize);
-      // 然后根据加载的 petSize 初始化窗口大小
-      initializeWindowSize(savedSize);
-    } else {
-      // 如果没有保存的大小，使用默认值
-      initializeWindowSize(petSizeSlider.value);
-    }
-    
-    // 加载透明度设置
-    const savedOpacity = await invoke('get_pet_opacity');
-    if (typeof savedOpacity === 'number') {
-      updatePetOpacity(savedOpacity);
-    }
-    
-    // 加载边框显示设置
-    const savedShowBorder = await invoke('get_show_border');
-    if (typeof savedShowBorder === 'boolean') {
-      updateShowBorder(savedShowBorder);
-    }
-    
-  } catch (error) {
-    console.error('加载外观设置失败:', error);
-    // 出错时使用默认值
-    initializeWindowSize(petSizeSlider.value);
-  }
-  
-  // 使用事件总线替代直接的 listen 调用
-  await eventBus.onPreviewPetSize((newSize) => {
-    updatePreviewSize(newSize);
-    // 不在预览时调整窗口大小，避免窗口乱动
+  await configStore.initialize(false)  // 主页面需要监听配置变更事件，刷新配置
+  initializeWindowSize(config.value.appearance.pet_size);
+
+  watchEffect(() => {
+    throttledResizeWindow(config.value.appearance.pet_size);
   });
 
-  // 监听设置最终确定事件（拖拽结束时）
-  await eventBus.onPetSizeChanged((newSize) => {
-    console.log('宠物大小已更新:', newSize);
-    // 只在设置确定时调整窗口大小
-    resizeWindow(newSize);
-  });
+  watch(
+    () => configStore.window,
+    () => {
+      configStore.throttledSaveConfig();
+      console.log('窗口配置已更新并保存:', configStore.window);
+    },
+    { deep: true, immediate: true }
+  )
 
-  // 监听后端保存完成事件 - 但不调整窗口大小，避免重复调整
-  await eventBus.onPetSizeSaved((newSize) => {
-    console.log('宠物大小已保存到后端:', newSize);
-    // 不再调用 resizeWindow，因为 pet-size-changed 已经调整过了
-  });
-
-  await eventBus.onPreviewPetOpacity((newOpacity) => {
-    updatePreviewOpacity(newOpacity);
-  });
-
-  await eventBus.onPreviewPetBorder((newShowBorder) => {
-    updatePreviewBorder(newShowBorder);
-  });
-
-  await eventBus.onPetBorderChanged((newShowBorder) => {
-    console.log('轮廓线显示设置已更新:', newShowBorder);
-  });
+  setupMainWindowPositionPersistence();
 });
 </script>
 
 <template>
-  <div 
-    ref="windowElement"
-    class="desktop-pet" 
-    @mousedown.left="handleWindowDrag"
-    @click="handleClick"
-    :style="{ opacity: petOpacity }"
-  >
-    <PetAvatar 
-      :pet-size="petSize" 
-      :show-border="showBorder"
-      @open-settings="openSettings"
-    />
+  <div ref="windowElement" class="desktop-pet" @mousedown.left="handleWindowDrag"
+    :style="{ opacity: config.appearance.pet_opacity }">
+    <PetAvatar :pet-size="config.appearance.pet_size" :show-border="config.appearance.pet_show_border" />
   </div>
 </template>
 

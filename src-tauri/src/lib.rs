@@ -22,19 +22,19 @@
  */
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use tauri::Manager;
 use std::sync::Arc;
+use tauri::Manager;
 
 // 模块导入
-mod macos;
-mod windows;
-mod config;
 mod commands;
+mod config;
+mod macos;
 mod state;
+mod windows;
 
+use commands::*;
 use config::ConfigManager;
 use state::AppState;
-use commands::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -43,65 +43,64 @@ pub fn run() {
             // 创建配置管理器
             let config_manager = ConfigManager::new("desktop_pet")
                 .map_err(|e| format!("初始化配置管理器失败: {}", e))?;
-            
+
             // 设置应用状态
             let app_state = AppState {
                 config_manager: Arc::new(tokio::sync::Mutex::new(config_manager)),
             };
-            
+
             // 异步加载窗口配置并设置主窗口位置
             let config_manager_clone = app_state.config_manager.clone();
             let main_window = app.get_webview_window("main").unwrap();
             let main_window_clone = main_window.clone();
-            
+
             tauri::async_runtime::spawn(async move {
                 let manager = config_manager_clone.lock().await;
                 if let Ok(window_config) = manager.get_window().await {
-                    let _ = main_window_clone.set_position(tauri::LogicalPosition::new(
-                        window_config.main_window_x,
-                        window_config.main_window_y
-                    ));
+                    if let Ok(size) = main_window_clone.inner_size() {
+                        let width = size.width as f64;
+                        let height = size.height as f64;
+
+                        // 中心点 => 左上角
+                        let left = window_config.main_window_x - width / 2.0;
+                        let top = window_config.main_window_y - height / 2.0;
+
+                        let _ =
+                            main_window_clone.set_position(tauri::LogicalPosition::new(left, top));
+                    }
                 }
             });
-            
+
             app.manage(app_state);
-            
+
             // 设置平台特定配置
             if macos::is_macos() {
                 macos::setup_app();
             }
-            
+
             if windows::is_windows() {
                 windows::setup_app();
             }
-            
+
             // 设置窗口特定配置
             if let Err(e) = macos::setup_window(&main_window) {
                 eprintln!("设置macOS窗口配置时出错: {}", e);
             }
-            
+
             if let Err(e) = windows::setup_window(&main_window) {
                 eprintln!("设置Windows窗口配置时出错: {}", e);
             }
-            
+
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
-            get_pet_size,
-            set_pet_size,
-            save_pet_size,
-            get_pet_opacity,
-            set_pet_opacity,
-            save_pet_opacity,
-            get_show_border,
-            save_show_border,
-            quit_app,
+            load_config,
+            save_config,
             get_ai_config,
-            save_ai_config,
-            save_main_window_position,
-            save_settings_window_bounds,
-            get_window_config
+            get_appearance_config,
+            get_window_config,
+            quit_app
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
