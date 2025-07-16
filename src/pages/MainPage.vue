@@ -27,11 +27,9 @@ import { storeToRefs } from "pinia";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { throttle } from "lodash";
 import { useMainWindowResize } from "../services/useMainWindowResize";
-import { useWindowDrag } from "../composables/window/useWindowDrag";
 import { watch  } from "vue";
 
 const { initializeWindowSize, throttledResizeWindow } = useMainWindowResize();
-const { handleWindowDrag } = useWindowDrag();
 
 const configStore = useConfigStore();
 
@@ -79,7 +77,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div ref="windowElement" class="desktop-pet" @mousedown.left="handleWindowDrag"
+  <div ref="windowElement" class="desktop-pet" @mousedown.left="getCurrentWebviewWindow().startDragging()"
     :style="{ opacity: config.appearance.pet_opacity }">
     <PetAvatar :pet-size="config.appearance.pet_size" :show-border="config.appearance.pet_show_border" />
   </div>
